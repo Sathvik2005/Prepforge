@@ -15,6 +15,7 @@ let firebaseApp = null;
  */
 export const initializeFirebase = () => {
   if (firebaseApp) {
+    console.log('✅ Firebase already initialized');
     return firebaseApp;
   }
 
@@ -41,10 +42,12 @@ export const initializeFirebase = () => {
 
     firebaseApp = admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      projectId: process.env.FIREBASE_PROJECT_ID
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      storageBucket: `${process.env.FIREBASE_PROJECT_ID}.firebasestorage.app`
     });
 
-    console.log('✅ Firebase Admin SDK initialized');
+    console.log('✅ Firebase Admin SDK initialized successfully');
+    console.log('   Project ID:', process.env.FIREBASE_PROJECT_ID);
     return firebaseApp;
 
   } catch (error) {

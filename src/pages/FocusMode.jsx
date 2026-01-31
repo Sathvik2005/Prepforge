@@ -188,7 +188,7 @@ const FocusMode = () => {
               onClick={() => switchMode(item.key)}
               className={`px-6 py-3 rounded-xl font-medium transition-all ${
                 mode === item.key
-                  ? 'bg-gradient-to-r from-blue-500 to-purple-500 glow'
+                  ? 'bg-royal-600 text-white shadow-soft-md'
                   : 'glass hover:glass-strong'
               }`}
             >
@@ -232,7 +232,7 @@ const FocusMode = () => {
             <defs>
               <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#3b82f6" />
-                <stop offset="100%" stopColor="#8b5cf6" />
+                <stop offset="100%" stopColor="#2563eb" />
               </linearGradient>
             </defs>
           </svg>
@@ -244,11 +244,11 @@ const FocusMode = () => {
                 key={timeLeft}
                 initial={{ scale: 1.1 }}
                 animate={{ scale: 1 }}
-                className="text-8xl font-bold gradient-text mb-4"
+                className="text-8xl font-bold text-royal-600 mb-4"
               >
                 {formatTime(timeLeft)}
               </motion.div>
-              <p className="text-xl text-gray-400">
+              <p className="text-xl text-surface-600 dark:text-surface-400">
                 {mode === 'focus' ? 'Stay Focused' : mode === 'short-break' ? 'Take a Break' : 'Long Break'}
               </p>
             </div>
@@ -265,7 +265,7 @@ const FocusMode = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={toggleTimer}
-            className="w-20 h-20 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition-all glow flex items-center justify-center"
+            className="w-20 h-20 rounded-full bg-royal-600 hover:bg-royal-700 text-white transition-all shadow-soft-lg flex items-center justify-center"
           >
             {isActive ? <Pause className="w-8 h-8" /> : <Play className="w-8 h-8 ml-1" />}
           </motion.button>
@@ -292,12 +292,12 @@ const FocusMode = () => {
               <div
                 key={index}
                 className={`w-3 h-3 rounded-full ${
-                  index < sessions ? 'bg-gradient-to-r from-green-400 to-emerald-400' : 'bg-gray-700'
+                  index < sessions ? 'bg-royal-600' : 'bg-surface-300 dark:bg-gray-700'
                 }`}
               />
             ))}
           </div>
-          <p className="text-2xl font-bold gradient-text mt-3">{sessions} / 8</p>
+          <p className="text-2xl font-bold text-royal-600 mt-3">{sessions} / 8</p>
         </motion.div>
       </div>
     </div>

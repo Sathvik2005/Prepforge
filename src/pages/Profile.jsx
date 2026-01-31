@@ -58,10 +58,10 @@ const Profile = () => {
   };
 
   const stats = [
-    { icon: Target, label: 'Questions Solved', value: 248, color: 'from-blue-500 to-cyan-500' },
-    { icon: Award, label: 'Badges Earned', value: 12, color: 'from-yellow-500 to-orange-500' },
-    { icon: Calendar, label: 'Days Active', value: 45, color: 'from-green-500 to-emerald-500' },
-    { icon: TrendingUp, label: 'Current Streak', value: 15, color: 'from-purple-500 to-pink-500' },
+    { icon: Target, label: 'Questions Solved', value: 248, color: 'bg-royal-600' },
+    { icon: Award, label: 'Badges Earned', value: 12, color: 'bg-warning-600' },
+    { icon: Calendar, label: 'Days Active', value: 45, color: 'bg-success-600' },
+    { icon: TrendingUp, label: 'Current Streak', value: 15, color: 'bg-navy-700' },
   ];
 
   const badges = [
@@ -81,10 +81,10 @@ const Profile = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-12"
         >
-          <h1 className="text-5xl font-bold mb-4">
-            <span className="gradient-text">Your Profile</span>
+          <h1 className="text-5xl font-bold mb-4 text-navy-900 dark:text-white">
+            Your <span className="text-royal-600">Profile</span>
           </h1>
-          <p className="text-xl text-gray-400">Manage your account and track your journey</p>
+          <p className="text-xl text-surface-600 dark:text-surface-400">Manage your account and track your journey</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -108,7 +108,7 @@ const Profile = () => {
               </div>
 
               <div className="flex items-center space-x-6 mb-8">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-4xl font-bold glow">
+                <div className="w-24 h-24 rounded-full bg-royal-600 flex items-center justify-center text-4xl font-bold text-white shadow-soft-lg">
                   {user?.name?.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1">
@@ -181,8 +181,8 @@ const Profile = () => {
               transition={{ delay: 0.1 }}
               className="glass-strong rounded-2xl p-8"
             >
-              <h2 className="text-2xl font-semibold mb-6 flex items-center">
-                <Brain className="w-6 h-6 mr-2 text-purple-400" />
+              <h2 className="text-2xl font-semibold mb-6 flex items-center text-navy-900 dark:text-white">
+                <Brain className="w-6 h-6 mr-2 text-royal-600 dark:text-royal-400" />
                 Resume Skill Gap Analyzer
               </h2>
 
@@ -247,7 +247,7 @@ const Profile = () => {
                     </div>
                   </div>
 
-                  <button className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 font-semibold transition-all">
+                  <button className="w-full py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white font-semibold transition-all shadow-soft-md">
                     Generate Practice Plan for Gaps
                   </button>
                 </motion.div>

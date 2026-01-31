@@ -123,18 +123,18 @@
 }
 
 .metric-card.confidence .metric-icon {
-  background: #f3e8ff;
-  color: #8b5cf6;
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .metric-card.ranking .metric-icon {
   background: #fef3c7;
-  color: #f59e0b;
+  color: #d97706;
 }
 
 .metric-card.frequency .metric-icon {
   background: #d1fae5;
-  color: #10b981;
+  color: #16a34a;
 }
 
 .metric-content {

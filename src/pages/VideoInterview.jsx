@@ -377,7 +377,7 @@ const VideoInterview = () => {
           className="max-w-4xl w-full glass rounded-3xl p-8"
         >
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-4 gradient-text">Interview Lobby</h1>
+            <h1 className="text-4xl font-bold mb-4 text-navy-900 dark:text-white">Interview Lobby</h1>
             <p className="text-gray-400">Check your devices before joining</p>
           </div>
 
@@ -529,7 +529,7 @@ const VideoInterview = () => {
             <CheckCircle2 className="w-16 h-16 text-white" />
           </motion.div>
 
-          <h2 className="text-4xl font-bold mb-4 gradient-text">Interview Completed!</h2>
+          <h2 className="text-4xl font-bold mb-4 text-navy-900 dark:text-white">Interview Completed!</h2>
           <p className="text-xl text-gray-400 mb-8">
             Great job! Your interview has been successfully recorded.
           </p>
@@ -540,7 +540,7 @@ const VideoInterview = () => {
               <p className="text-sm text-gray-400">Duration</p>
             </div>
             <div className="p-4 bg-white/5 rounded-xl">
-              <p className="text-2xl font-bold text-purple-400">{currentQuestion + 1}</p>
+              <p className="text-2xl font-bold text-royal-600">{currentQuestion + 1}</p>
               <p className="text-sm text-gray-400">Questions</p>
             </div>
             <div className="p-4 bg-white/5 rounded-xl">
@@ -562,7 +562,7 @@ const VideoInterview = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard')}
-            className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl font-bold text-lg"
+            className="w-full py-4 bg-royal-600 rounded-xl font-bold text-lg hover:bg-royal-700"
           >
             Back to Dashboard
           </motion.button>

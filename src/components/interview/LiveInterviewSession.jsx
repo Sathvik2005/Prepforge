@@ -141,7 +141,7 @@ function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
             <button
               onClick={() => handleStart('behavioral')}
               disabled={!connected}
-              className="px-6 py-4 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
+              className="px-6 py-4 bg-royal-600 text-white rounded-lg font-semibold hover:bg-royal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105"
             >
               🗣️ Behavioral Interview
             </button>
@@ -190,7 +190,7 @@ function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
           
           {/* Overall Score */}
           <div className="mb-8 text-center">
-            <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 text-white mb-4">
+            <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-royal-600 text-white mb-4">
               <div>
                 <div className="text-4xl font-bold">{finalEvaluation.overallScore}</div>
                 <div className="text-sm">/ 100</div>
@@ -276,7 +276,7 @@ function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
           
           <button
             onClick={() => window.location.reload()}
-            className="w-full px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
+            className="w-full px-6 py-3 bg-royal-600 text-white rounded-lg font-semibold hover:bg-royal-700 transition-all"
           >
             Start New Interview
           </button>
@@ -377,7 +377,7 @@ function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
                   <button
                     onClick={handleSubmitAnswer}
                     disabled={!answer.trim() || isEvaluating}
-                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 disabled:transform-none"
+                    className="px-8 py-3 bg-royal-600 text-white rounded-lg font-semibold hover:bg-royal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-105 disabled:transform-none"
                   >
                     {isEvaluating ? (
                       <span className="flex items-center gap-2">
@@ -408,7 +408,7 @@ function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
                 
                 {/* Score */}
                 <div className="flex items-center gap-4 mb-6">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white">
+                  <div className="w-20 h-20 rounded-full bg-royal-600 flex items-center justify-center text-white">
                     <div className="text-2xl font-bold">{evaluation.score}</div>
                   </div>
                   <div>
@@ -491,7 +491,7 @@ function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
                   <div className="text-sm text-gray-600">Topics Covered</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-purple-600">
+                  <div className="text-2xl font-bold text-royal-600">
                     {sessionState.skillsProbed?.length || 0}
                   </div>
                   <div className="text-sm text-gray-600">Skills Tested</div>

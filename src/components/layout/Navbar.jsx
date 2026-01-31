@@ -3,13 +3,21 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Zap, User, LogOut, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '@/store/authStore';
+import { useThemeStore } from '@/store/themeStore';
+import ThemeToggle from '@/components/ui/ThemeToggle';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user, logout } = useAuthStore();
+  const { initTheme } = useThemeStore();
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    // Initialize theme on mount
+    initTheme();
+  }, [initTheme]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +37,7 @@ const Navbar = () => {
     ? [
         { name: 'Dashboard', path: '/dashboard', icon: BarChart3 },
         { name: 'Roadmap', path: '/roadmap', icon: Zap },
+        { name: 'DSA Sheets', path: '/dsa-sheets', icon: Zap },
         { name: 'Practice', path: '/practice', icon: Zap },
         { name: 'Mock Interview', path: '/mock-interview', icon: Zap },
         { name: 'Schedule Interview', path: '/schedule-interview', icon: Zap },
@@ -56,11 +65,11 @@ const Navbar = () => {
             <motion.div
               whileHover={{ rotate: 180, scale: 1.1 }}
               transition={{ duration: 0.6 }}
-              className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center glow"
+              className="w-10 h-10 bg-royal-600 rounded-lg flex items-center justify-center shadow-soft-md"
             >
               <Zap className="w-6 h-6 text-white" />
             </motion.div>
-            <span className="text-2xl font-bold gradient-text-blue">
+            <span className="text-2xl font-bold text-navy-900 dark:text-white">
               PrepForge
             </span>
           </Link>
@@ -71,10 +80,10 @@ const Navbar = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`text-sm font-medium transition-all duration-300 hover:text-blue-400 ${
+                className={`text-sm font-medium transition-all duration-300 hover:text-royal-500 ${
                   location.pathname === link.path
-                    ? 'text-blue-400'
-                    : 'text-gray-300'
+                    ? 'text-royal-600'
+                    : 'text-surface-600 dark:text-surface-300'
                 }`}
               >
                 {link.name}
@@ -84,6 +93,9 @@ const Navbar = () => {
 
           {/* User Menu / Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            {/* Theme Toggle */}
+            <ThemeToggle variant="simple" />
+            
             {user ? (
               <>
                 <Link
@@ -95,7 +107,7 @@ const Navbar = () => {
                 </Link>
                 <button
                   onClick={handleLogout}
-                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-red-500/20 hover:bg-red-500/30 transition-all duration-300"
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg bg-error-500/10 hover:bg-error-500/20 text-error-600 dark:text-error-500 transition-all duration-300"
                 >
                   <LogOut className="w-4 h-4" />
                   <span className="text-sm">Logout</span>
@@ -105,13 +117,13 @@ const Navbar = () => {
               <>
                 <Link
                   to="/login"
-                  className="px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-all duration-300"
+                  className="px-4 py-2 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-royal-600 dark:hover:text-royal-400 transition-all duration-300"
                 >
                   Login
                 </Link>
                 <Link
                   to="/register"
-                  className="px-6 py-2 text-sm font-medium rounded-lg bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition-all duration-300 glow"
+                  className="px-6 py-2 text-sm font-medium rounded-lg bg-royal-600 hover:bg-royal-700 text-white transition-all duration-300 shadow-soft-md"
                 >
                   Get Started
                 </Link>
@@ -149,7 +161,7 @@ const Navbar = () => {
                   key={link.path}
                   to={link.path}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className="block py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-all duration-300"
+                  className="block py-2 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-royal-600 dark:hover:text-royal-400 transition-all duration-300"
                 >
                   {link.name}
                 </Link>
@@ -159,7 +171,7 @@ const Navbar = () => {
                   <Link
                     to="/profile"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-all duration-300"
+                    className="block py-2 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-royal-600 dark:hover:text-royal-400 transition-all duration-300"
                   >
                     Profile
                   </Link>
@@ -178,14 +190,14 @@ const Navbar = () => {
                   <Link
                     to="/login"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block py-2 text-sm font-medium text-gray-300 hover:text-blue-400 transition-all duration-300"
+                    className="block py-2 text-sm font-medium text-surface-600 dark:text-surface-300 hover:text-royal-600 dark:hover:text-royal-400 transition-all duration-300"
                   >
                     Login
                   </Link>
                   <Link
                     to="/register"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="block py-2 text-sm font-medium text-blue-400 hover:text-blue-300 transition-all duration-300"
+                    className="block py-2 text-sm font-medium text-royal-600 hover:text-royal-500 transition-all duration-300"
                   >
                     Get Started
                   </Link>

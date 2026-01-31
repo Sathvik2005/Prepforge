@@ -8,7 +8,9 @@
     "client": "vite",
     "server": "node server/index.js",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "diagnostics": "node server/diagnostics.js",
+    "check": "node server/diagnostics.js"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.6.0",

@@ -103,10 +103,10 @@ console.log(twoSum([2, 7, 11, 15], 9));`);
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-4xl font-bold mb-2">
-            <span className="gradient-text">Code Playground</span>
+          <h1 className="text-4xl font-bold mb-2 text-navy-900 dark:text-white">
+            Code <span className="text-royal-600">Playground</span>
           </h1>
-          <p className="text-gray-400">Write, execute, and visualize your code</p>
+          <p className="text-surface-600 dark:text-surface-400">Write, execute, and visualize your code</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

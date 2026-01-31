@@ -43,37 +43,37 @@ const Practice = () => {
       name: 'Data Structures',
       icon: '🏗️',
       questions: 145,
-      gradient: 'from-blue-500 to-cyan-500',
+      gradient: 'bg-royal-600',
     },
     {
       name: 'Algorithms',
       icon: '⚡',
       questions: 230,
-      gradient: 'from-purple-500 to-pink-500',
+      gradient: 'bg-navy-700',
     },
     {
       name: 'System Design',
       icon: '🏛️',
       questions: 87,
-      gradient: 'from-green-500 to-emerald-500',
+      gradient: 'bg-success-600',
     },
     {
       name: 'JavaScript',
       icon: '📜',
       questions: 198,
-      gradient: 'from-yellow-500 to-orange-500',
+      gradient: 'bg-warning-600',
     },
     {
       name: 'React',
       icon: '⚛️',
       questions: 156,
-      gradient: 'from-cyan-500 to-blue-500',
+      gradient: 'bg-royal-500',
     },
     {
       name: 'Databases',
       icon: '🗄️',
       questions: 92,
-      gradient: 'from-red-500 to-orange-500',
+      gradient: 'bg-error-600',
     },
   ];
 
@@ -197,10 +197,10 @@ const Practice = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-12"
           >
-            <h1 className="text-5xl font-bold mb-4">
-              <span className="gradient-text">Adaptive Practice</span>
+            <h1 className="text-5xl font-bold mb-4 text-navy-900 dark:text-white">
+              Adaptive <span className="text-royal-600">Practice</span>
             </h1>
-            <p className="text-xl text-gray-400">
+            <p className="text-xl text-surface-600 dark:text-surface-400">
               Questions that adapt to your skill level
             </p>
           </motion.div>
@@ -389,14 +389,14 @@ const Practice = () => {
               {!showResult ? (
                 <button
                   onClick={submitAnswer}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 font-semibold transition-all glow"
+                  className="flex-1 py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white font-semibold transition-all shadow-soft-md"
                 >
                   Submit Answer
                 </button>
               ) : (
                 <button
                   onClick={loadNextQuestion}
-                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 font-semibold transition-all flex items-center justify-center space-x-2"
+                  className="flex-1 py-3 rounded-xl bg-success-600 hover:bg-success-700 text-white font-semibold transition-all flex items-center justify-center space-x-2"
                 >
                   <span>Next Question</span>
                   <ArrowRight className="w-5 h-5" />

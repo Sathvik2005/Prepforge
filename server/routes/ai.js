@@ -59,7 +59,12 @@ router.post('/roadmap/generate', auth, async (req, res) => {
     
   } catch (error) {
     console.error('Error generating roadmap:', error);
-    res.status(500).json({ message: 'Server error generating roadmap' });
+    console.error('Error details:', error.message);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ 
+      message: 'Server error generating roadmap',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 
@@ -93,7 +98,11 @@ router.get('/roadmap/current', auth, async (req, res) => {
     
   } catch (error) {
     console.error('Error fetching roadmap:', error);
-    res.status(500).json({ message: 'Server error fetching roadmap' });
+    console.error('Error details:', error.message);
+    res.status(500).json({ 
+      message: 'Server error fetching roadmap',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 });
 

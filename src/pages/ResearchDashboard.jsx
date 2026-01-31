@@ -163,7 +163,7 @@ const ResearchDashboard = () => {
         >
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-5xl font-bold mb-2 gradient-text">Research Dashboard</h1>
+              <h1 className="text-5xl font-bold mb-2 text-navy-900 dark:text-white">Research Dashboard</h1>
               <p className="text-xl text-gray-400">
                 Advanced learning analytics & educational data mining
               </p>
@@ -172,7 +172,7 @@ const ResearchDashboard = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={exportData}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl font-semibold"
+              className="flex items-center gap-2 px-6 py-3 bg-royal-600 rounded-xl font-semibold hover:bg-royal-700"
             >
               <Download className="w-5 h-5" />
               Export Data
@@ -188,7 +188,7 @@ const ResearchDashboard = () => {
             className="glass rounded-2xl p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-royal-600 rounded-xl flex items-center justify-center">
                 <Zap className="w-6 h-6 text-white" />
               </div>
               <span className={`text-xs px-3 py-1 rounded-full ${
@@ -201,9 +201,9 @@ const ResearchDashboard = () => {
             </div>
             <h3 className="text-2xl font-bold mb-1">{learningBehavior.learningVelocity.questionsPerDay}</h3>
             <p className="text-sm text-gray-400">Questions/Day</p>
-            <div className="mt-4 h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="mt-4 h-2 bg-surface-200 dark:bg-white/10 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-blue-500 to-cyan-500"
+                className="h-full bg-royal-600"
                 style={{ width: `${learningBehavior.learningVelocity.velocityScore}%` }}
               />
             </div>
@@ -215,7 +215,7 @@ const ResearchDashboard = () => {
             className="glass rounded-2xl p-6"
           >
             <div className="flex items-center justify-between mb-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+              <div className="w-12 h-12 bg-navy-700 rounded-xl flex items-center justify-center">
                 <Brain className="w-6 h-6 text-white" />
               </div>
               <span className={`text-xs px-3 py-1 rounded-full border capitalize ${cognitiveLoadColors[cognitiveLoad]}`}>
@@ -370,7 +370,7 @@ const ResearchDashboard = () => {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Educational Data Mining */}
           <div className="glass rounded-2xl p-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-royal-600 rounded-xl flex items-center justify-center mb-4">
               <BarChart3 className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold mb-2">Educational Data Mining</h3>
@@ -391,7 +391,7 @@ const ResearchDashboard = () => {
 
           {/* Question Calibration */}
           <div className="glass rounded-2xl p-6">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-navy-700 rounded-xl flex items-center justify-center mb-4">
               <Activity className="w-6 h-6 text-white" />
             </div>
             <h3 className="text-xl font-bold mb-2">Difficulty Calibration</h3>

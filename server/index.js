@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -20,13 +22,27 @@ import conversationalInterviewRoutes from './routes/conversationalInterview.js';
 import liveInterviewRoutes from './routes/liveInterview.js';
 import improvedInterviewRoutes from './routes/improvedInterview.js';
 import mediaRoutes from './routes/media.js';
+import dsaProgressRoutes from './routes/dsaProgress.js';
 import { initializeFirebase } from './config/firebase.js';
 import { initializeOpenAI } from './config/openai.js';
 import { setupCollaborationHandlers } from './sockets/collaborationHandlers.js';
 import { setupInterviewHandlers } from './sockets/interviewHandlers.js';
 import setupInterviewSocket from './sockets/interviewSocket.js';
 
-dotenv.config();
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from root directory
+dotenv.config({ path: resolve(__dirname, '../.env') });
+
+// Verify critical environment variables
+console.log('🔍 Environment Configuration Check:');
+console.log('   PORT:', process.env.PORT || '5000 (default)');
+console.log('   MONGODB_URI:', process.env.MONGODB_URI ? '✅ Configured' : '❌ MISSING');
+console.log('   OPENAI_API_KEY:', process.env.OPENAI_API_KEY ? '✅ Configured (' + process.env.OPENAI_API_KEY.substring(0, 20) + '...)' : '❌ MISSING');
+console.log('   FIREBASE_PROJECT_ID:', process.env.FIREBASE_PROJECT_ID ? '✅ Configured' : '❌ MISSING');
+console.log('');
 
 const app = express();
 const httpServer = createServer(app);
@@ -56,8 +72,17 @@ app.use(cors({
 app.use(express.json());
 
 // Initialize Firebase and OpenAI
-initializeFirebase();
-initializeOpenAI();
+console.log('🔧 Initializing External Services...');
+const firebaseInitialized = initializeFirebase();
+const openaiInitialized = initializeOpenAI();
+
+if (!firebaseInitialized) {
+  console.warn('⚠️  Warning: Firebase not initialized. Authentication may not work properly.');
+}
+
+if (!openaiInitialized) {
+  console.warn('⚠️  Warning: OpenAI not initialized. AI features will use mock responses.');
+}
 
 // Setup Socket.IO handlers
 setupCollaborationHandlers(io);
@@ -72,15 +97,20 @@ const connectDB = async () => {
   try {
     connectionAttempts++;
     
+    // Check if MONGODB_URI is configured
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI not found in environment variables');
+    }
+    
     const mongoOptions = {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
       family: 4, // Use IPv4, skip trying IPv6
       retryWrites: true,
       w: 'majority',
-      tls: true,
-      tlsAllowInvalidCertificates: true, // For development only
-      tlsAllowInvalidHostnames: true, // For development only
+      ssl: true,
+      tlsAllowInvalidCertificates: true,
+      tlsAllowInvalidHostnames: true,
     };
 
     // Try MongoDB Atlas first
@@ -92,9 +122,11 @@ const connectDB = async () => {
       mongoURI = 'mongodb://localhost:27017/prepforge';
     }
 
+    console.log(`🔌 Connecting to MongoDB (Attempt ${connectionAttempts}/${MAX_ATTEMPTS})...`);
     await mongoose.connect(mongoURI, mongoOptions);
     console.log('✅ MongoDB Connected Successfully');
     console.log(`📍 Database: ${mongoURI.includes('localhost') ? 'Local MongoDB' : 'MongoDB Atlas'}`);
+    console.log(`📊 Database Name: ${mongoose.connection.name}`);
     connectionAttempts = 0; // Reset on success
   } catch (error) {
     console.error('❌ MongoDB Connection Error:', error.message);
@@ -136,6 +168,7 @@ app.use('/api/interview/conversational', conversationalInterviewRoutes); // Conv
 app.use('/api/interview', liveInterviewRoutes); // Real-Time Adaptive Interviews (V2)
 app.use('/api/interview/v3', improvedInterviewRoutes); // NEW: Fully Dynamic Interviews (V3)
 app.use('/api/media', mediaRoutes); // NEW: Media upload for video interviews
+app.use('/api/dsa-progress', dsaProgressRoutes); // DSA Sheets & Playlist Progress Tracking
 
 // Health Check
 app.get('/api/health', (req, res) => {

@@ -32,14 +32,14 @@ const Footer = () => {
           {/* Brand Section */}
           <div className="lg:col-span-2">
             <Link to="/" className="flex items-center space-x-2 mb-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center glow">
+              <div className="w-10 h-10 bg-royal-600 rounded-lg flex items-center justify-center shadow-soft-md">
                 <Zap className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold gradient-text-blue">
+              <span className="text-2xl font-bold text-navy-900 dark:text-white">
                 PrepForge
               </span>
             </Link>
-            <p className="text-gray-400 text-sm mb-4 max-w-sm">
+            <p className="text-surface-600 dark:text-surface-400 text-sm mb-4 max-w-sm">
               AI-Powered Interview Preparation Platform with Adaptive Learning.
               Master your interviews with personalized roadmaps, adaptive questions,
               and stunning visualizations.

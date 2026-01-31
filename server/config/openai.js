@@ -15,6 +15,7 @@ let openaiClient = null;
  */
 export const initializeOpenAI = () => {
   if (openaiClient) {
+    console.log('✅ OpenAI already initialized');
     return openaiClient;
   }
 
@@ -28,7 +29,8 @@ export const initializeOpenAI = () => {
       apiKey: process.env.OPENAI_API_KEY
     });
 
-    console.log('✅ OpenAI API initialized');
+    console.log('✅ OpenAI API initialized successfully');
+    console.log('   API Key:', process.env.OPENAI_API_KEY.substring(0, 20) + '...');
     return openaiClient;
 
   } catch (error) {

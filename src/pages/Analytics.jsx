@@ -64,10 +64,10 @@ const Analytics = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-12"
         >
-          <h1 className="text-5xl font-bold mb-4">
-            <span className="gradient-text">Analytics Dashboard</span>
+          <h1 className="text-5xl font-bold mb-4 text-navy-900 dark:text-white">
+            Analytics <span className="text-royal-600">Dashboard</span>
           </h1>
-          <p className="text-xl text-gray-400">
+          <p className="text-xl text-surface-600 dark:text-surface-400">
             Deep insights into your preparation journey
           </p>
         </motion.div>
@@ -75,10 +75,10 @@ const Analytics = () => {
         {/* Key Metrics */}
         <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
           {[
-            { icon: Target, label: 'Total Solved', value: 248, color: 'from-blue-500 to-cyan-500' },
-            { icon: TrendingUp, label: 'Accuracy', value: 85, suffix: '%', color: 'from-green-500 to-emerald-500' },
-            { icon: Clock, label: 'Study Hours', value: 127, suffix: 'h', color: 'from-purple-500 to-pink-500' },
-            { icon: Award, label: 'Streak Days', value: 15, color: 'from-orange-500 to-red-500' },
+            { icon: Target, label: 'Total Solved', value: 248, color: 'bg-royal-600' },
+            { icon: TrendingUp, label: 'Accuracy', value: 85, suffix: '%', color: 'bg-success-600' },
+            { icon: Clock, label: 'Study Hours', value: 127, suffix: 'h', color: 'bg-navy-700' },
+            { icon: Award, label: 'Streak Days', value: 15, color: 'bg-warning-600' },
           ].map((metric, index) => (
             <motion.div
               key={index}
@@ -87,7 +87,7 @@ const Analytics = () => {
               transition={{ delay: index * 0.1 }}
               className="glass-strong rounded-2xl p-6"
             >
-              <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${metric.color} flex items-center justify-center mb-4`}>
+              <div className={`w-12 h-12 rounded-xl ${metric.color} flex items-center justify-center mb-4`}>
                 <metric.icon className="w-6 h-6 text-white" />
               </div>
               <p className="text-gray-400 text-sm mb-2">{metric.label}</p>

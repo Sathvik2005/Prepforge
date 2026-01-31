@@ -334,21 +334,21 @@ const AsyncInterview = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.2, type: 'spring' }}
-            className="w-24 h-24 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6"
+            className="w-24 h-24 bg-success-600 rounded-full flex items-center justify-center mx-auto mb-6"
           >
             <CheckCircle2 className="w-16 h-16 text-white" />
           </motion.div>
 
-          <h2 className="text-4xl font-bold mb-4 gradient-text">Interview Submitted!</h2>
-          <p className="text-xl text-gray-400 mb-8">
+          <h2 className="text-4xl font-bold mb-4 text-royal-600">Interview Submitted!</h2>
+          <p className="text-xl text-surface-600 dark:text-surface-400 mb-8">
             Your asynchronous interview has been successfully submitted.
           </p>
 
-          <div className="p-6 bg-blue-500/10 rounded-xl border border-blue-500/30 mb-8">
-            <p className="text-blue-300 mb-4">
+          <div className="p-6 bg-royal-50 dark:bg-royal-900/20 rounded-xl border border-royal-200 dark:border-royal-400/30 mb-8">
+            <p className="text-royal-700 dark:text-royal-300 mb-4">
               🤖 Our AI system will analyze your responses within 24 hours.
             </p>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-surface-600 dark:text-surface-400">
               You'll receive detailed feedback on communication, clarity, content quality, and more.
             </p>
           </div>
@@ -357,7 +357,7 @@ const AsyncInterview = () => {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/dashboard')}
-            className="w-full py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl font-bold text-lg"
+            className="w-full py-4 bg-royal-600 hover:bg-royal-700 text-white rounded-xl font-bold text-lg"
           >
             Back to Dashboard
           </motion.button>
@@ -375,23 +375,23 @@ const AsyncInterview = () => {
           animate={{ y: 0, opacity: 1 }}
           className="text-center mb-8"
         >
-          <h1 className="text-4xl font-bold mb-2 gradient-text">Asynchronous Interview</h1>
-          <p className="text-gray-400">Record your answers at your own pace</p>
+          <h1 className="text-4xl font-bold mb-2 text-navy-900 dark:text-white">Asynchronous <span class="text-royal-600">Interview</span></h1>
+          <p className="text-surface-600 dark:text-surface-400">Record your answers at your own pace</p>
         </motion.div>
 
         {/* Progress Bar */}
         <div className="glass rounded-xl p-4 mb-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-400">
+            <span className="text-sm text-surface-500 dark:text-surface-400">
               Question {currentQuestion + 1} of {questions.length}
             </span>
             <span className="text-sm font-semibold">{getProgressPercentage()}% Complete</span>
           </div>
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-2 bg-surface-200 dark:bg-white/10 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${getProgressPercentage()}%` }}
-              className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+              className="h-full bg-royal-600"
             />
           </div>
         </div>

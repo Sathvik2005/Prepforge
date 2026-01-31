@@ -38,35 +38,35 @@ const InterviewScheduling = () => {
       id: 'frontend',
       name: 'Frontend Engineering',
       icon: Code,
-      color: 'from-blue-500 to-cyan-500',
+      color: 'bg-royal-600',
       duration: 60,
     },
     {
       id: 'backend',
       name: 'Backend Engineering',
       icon: Briefcase,
-      color: 'from-purple-500 to-pink-500',
+      color: 'bg-navy-700',
       duration: 60,
     },
     {
       id: 'dsa',
       name: 'Data Structures & Algorithms',
       icon: Brain,
-      color: 'from-green-500 to-emerald-500',
+      color: 'bg-success-600',
       duration: 90,
     },
     {
       id: 'system-design',
       name: 'System Design',
       icon: Globe,
-      color: 'from-orange-500 to-red-500',
+      color: 'bg-warning-600',
       duration: 75,
     },
     {
       id: 'behavioral',
       name: 'Behavioral / HR',
       icon: MessageSquare,
-      color: 'from-indigo-500 to-purple-500',
+      color: 'bg-royal-500',
       duration: 45,
     },
   ];
@@ -262,10 +262,10 @@ const InterviewScheduling = () => {
 
           {/* Confirmation Card */}
           <div className="glass rounded-3xl p-8 mb-6">
-            <h2 className="text-4xl font-bold text-center mb-2 gradient-text">
+            <h2 className="text-4xl font-bold text-center mb-2 text-royal-600">
               Interview Scheduled!
             </h2>
-            <p className="text-gray-400 text-center mb-8">
+            <p className="text-surface-600 dark:text-surface-400 text-center mb-8">
               Your interview has been confirmed. Check your email for details.
             </p>
 
@@ -304,12 +304,12 @@ const InterviewScheduling = () => {
               </div>
 
               {bookedInterview.meetingLink && (
-                <div className="p-4 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-xl border border-blue-500/30">
+                <div className="p-4 bg-royal-50 dark:bg-royal-900/20 rounded-xl border border-royal-200 dark:border-royal-400/30">
                   <div className="flex items-center gap-2 mb-2">
-                    <Video className="w-5 h-5 text-blue-400" />
-                    <span className="text-white font-semibold">Meeting Link</span>
+                    <Video className="w-5 h-5 text-royal-600 dark:text-royal-400" />
+                    <span className="text-navy-900 dark:text-white font-semibold">Meeting Link</span>
                   </div>
-                  <p className="text-blue-300 text-sm break-all">{bookedInterview.meetingLink}</p>
+                  <p className="text-royal-600 dark:text-royal-300 text-sm break-all">{bookedInterview.meetingLink}</p>
                   <p className="text-gray-400 text-xs mt-2">
                     Link will be active 10 minutes before the scheduled time
                   </p>
@@ -327,7 +327,7 @@ const InterviewScheduling = () => {
             <div className="flex gap-4 mt-8">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="flex-1 py-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl font-semibold hover:scale-105 transition-transform"
+                className="flex-1 py-4 bg-royal-600 hover:bg-royal-700 text-white rounded-xl font-semibold hover:scale-105 transition-transform"
               >
                 Go to Dashboard
               </button>
@@ -367,10 +367,10 @@ const InterviewScheduling = () => {
           animate={{ y: 0, opacity: 1 }}
           className="text-center mb-12"
         >
-          <h1 className="text-5xl font-bold mb-4 gradient-text">
-            Schedule Your Interview
+          <h1 className="text-5xl font-bold mb-4 text-navy-900 dark:text-white">
+            Schedule Your <span className="text-royal-600">Interview</span>
           </h1>
-          <p className="text-xl text-gray-400">
+          <p className="text-xl text-surface-600 dark:text-surface-400">
             Book a live or asynchronous interview with industry experts
           </p>
         </motion.div>
@@ -386,7 +386,7 @@ const InterviewScheduling = () => {
               className="glass rounded-2xl p-6"
             >
               <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-sm">
+                <div className="w-8 h-8 bg-royal-600 rounded-full flex items-center justify-center text-sm text-white">
                   1
                 </div>
                 Choose Interview Mode
@@ -436,7 +436,7 @@ const InterviewScheduling = () => {
               className="glass rounded-2xl p-6"
             >
               <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-sm">
+                <div className="w-8 h-8 bg-royal-600 rounded-full flex items-center justify-center text-sm text-white">
                   2
                 </div>
                 Select Interview Type
@@ -450,11 +450,11 @@ const InterviewScheduling = () => {
                     onClick={() => setSelectedType(type)}
                     className={`p-4 rounded-xl border-2 transition-all ${
                       selectedType?.id === type.id
-                        ? 'border-blue-500 bg-blue-500/20'
-                        : 'border-white/10 bg-white/5 hover:bg-white/10'
+                        ? 'border-royal-500 bg-royal-500/20'
+                        : 'border-surface-200 dark:border-white/10 bg-surface-50 dark:bg-white/5 hover:bg-surface-100 dark:hover:bg-white/10'
                     }`}
                   >
-                    <div className={`w-12 h-12 bg-gradient-to-br ${type.color} rounded-xl flex items-center justify-center mb-3 mx-auto`}>
+                    <div className={`w-12 h-12 ${type.color} rounded-xl flex items-center justify-center mb-3 mx-auto`}>
                       <type.icon className="w-6 h-6 text-white" />
                     </div>
                     <h4 className="font-semibold mb-1 text-sm">{type.name}</h4>
@@ -473,7 +473,7 @@ const InterviewScheduling = () => {
                 className="glass rounded-2xl p-6"
               >
                 <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-sm">
+                  <div className="w-8 h-8 bg-royal-600 rounded-full flex items-center justify-center text-sm text-white">
                     3
                   </div>
                   Choose Your Interviewer
@@ -489,8 +489,8 @@ const InterviewScheduling = () => {
                         onClick={() => setSelectedInterviewer(interviewer)}
                         className={`p-4 rounded-xl border-2 transition-all text-left ${
                           selectedInterviewer?.id === interviewer.id
-                            ? 'border-blue-500 bg-blue-500/20'
-                            : 'border-white/10 bg-white/5 hover:bg-white/10'
+                            ? 'border-royal-500 bg-royal-500/20'
+                            : 'border-surface-200 dark:border-white/10 bg-surface-50 dark:bg-white/5 hover:bg-surface-100 dark:hover:bg-white/10'
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -527,7 +527,7 @@ const InterviewScheduling = () => {
                 className="glass rounded-2xl p-6"
               >
                 <h3 className="text-2xl font-bold mb-4 flex items-center gap-2">
-                  <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-sm">
+                  <div className="w-8 h-8 bg-royal-600 rounded-full flex items-center justify-center text-sm text-white">
                     {interviewMode === 'live' ? '4' : '3'}
                   </div>
                   Select Date & Time
@@ -580,10 +580,10 @@ const InterviewScheduling = () => {
                         disabled={!isAvailable || isPast}
                         className={`aspect-square rounded-lg flex items-center justify-center text-sm font-semibold transition-all ${
                           isSelected
-                            ? 'bg-gradient-to-br from-blue-500 to-purple-500 text-white'
+                            ? 'bg-royal-600 text-white'
                             : isAvailable && !isPast
-                            ? 'bg-white/5 hover:bg-white/10 border border-white/10'
-                            : 'bg-white/5 text-gray-600 cursor-not-allowed'
+                            ? 'bg-surface-50 dark:bg-white/5 hover:bg-surface-100 dark:hover:bg-white/10 border border-surface-200 dark:border-white/10'
+                            : 'bg-surface-50 dark:bg-white/5 text-surface-400 dark:text-gray-600 cursor-not-allowed'
                         }`}
                       >
                         {date.getDate()}
@@ -610,10 +610,10 @@ const InterviewScheduling = () => {
                           disabled={!slot.available}
                           className={`py-3 rounded-lg text-sm font-semibold transition-all ${
                             selectedSlot?.time === slot.time
-                              ? 'bg-gradient-to-r from-blue-500 to-purple-500'
+                              ? 'bg-royal-600 text-white'
                               : slot.available
-                              ? 'bg-white/5 hover:bg-white/10 border border-white/10'
-                              : 'bg-white/5 text-gray-600 cursor-not-allowed line-through'
+                              ? 'bg-surface-50 dark:bg-white/5 hover:bg-surface-100 dark:hover:bg-white/10 border border-surface-200 dark:border-white/10'
+                              : 'bg-surface-50 dark:bg-white/5 text-surface-400 dark:text-gray-600 cursor-not-allowed line-through'
                           }`}
                         >
                           {slot.time}
@@ -689,8 +689,8 @@ const InterviewScheduling = () => {
                 disabled={!selectedDate || !selectedSlot || !selectedType || !interviewMode || (interviewMode === 'live' && !selectedInterviewer)}
                 className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
                   selectedDate && selectedSlot && selectedType && interviewMode && (interviewMode === 'async' || selectedInterviewer)
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-500 hover:shadow-lg hover:shadow-blue-500/50'
-                    : 'bg-gray-700 cursor-not-allowed opacity-50'
+                    ? 'bg-royal-600 hover:bg-royal-700 text-white hover:shadow-lg hover:shadow-royal-500/30'
+                    : 'bg-surface-300 dark:bg-gray-700 cursor-not-allowed opacity-50'
                 }`}
               >
                 Book Interview

@@ -233,7 +233,7 @@ const ResumeEditor = () => {
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowOptimization(!showOptimization)}
-              className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded"
+              className="flex items-center gap-2 bg-royal-600 hover:bg-royal-700 px-4 py-2 rounded"
             >
               <TrendingUp size={18} />
               ATS Optimize
@@ -299,7 +299,7 @@ const ResumeEditor = () => {
               <button
                 onClick={generateSummary}
                 disabled={aiEnhancing}
-                className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-3 py-1 rounded text-sm disabled:opacity-50"
+                className="flex items-center gap-2 bg-royal-600 hover:bg-royal-700 px-3 py-1 rounded text-sm disabled:opacity-50"
               >
                 <Sparkles size={16} />
                 AI Generate
@@ -362,7 +362,7 @@ const ResumeEditor = () => {
                       <button
                         onClick={() => enhanceBulletPoint(bullet, bIdx, 'experience', idx)}
                         disabled={aiEnhancing}
-                        className="bg-purple-600 hover:bg-purple-700 p-2 rounded disabled:opacity-50"
+                        className="bg-royal-600 hover:bg-royal-700 p-2 rounded disabled:opacity-50"
                         title="AI Enhance"
                       >
                         <Sparkles size={16} />
@@ -423,7 +423,7 @@ const ResumeEditor = () => {
             <button
               onClick={optimizeForJob}
               disabled={aiEnhancing}
-              className="w-full bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded mb-6 disabled:opacity-50"
+              className="w-full bg-royal-600 hover:bg-royal-700 px-4 py-2 rounded mb-6 disabled:opacity-50"
             >
               {aiEnhancing ? 'Analyzing...' : 'Analyze Match'}
             </button>
@@ -474,7 +474,7 @@ const ResumeEditor = () => {
                     <ul className="space-y-2">
                       {atsResults.suggestions.map((sugg, idx) => (
                         <li key={idx} className="text-sm text-gray-300 flex gap-2">
-                          <span className="text-purple-400">•</span>
+                          <span className="text-royal-600">•</span>
                           <span>{sugg.suggestion}</span>
                         </li>
                       ))}

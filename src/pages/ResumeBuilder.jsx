@@ -138,7 +138,7 @@ const ResumeBuilder = () => {
       </div>
 
       {/* Features Banner */}
-      <div className="bg-gradient-to-r from-blue-900 to-purple-900 rounded-lg p-6">
+      <div className="bg-navy-800 rounded-lg p-6">
         <h3 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
           <Zap className="text-yellow-400" size={24} />
           AI-Powered Features
@@ -154,12 +154,12 @@ const ResumeBuilder = () => {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="bg-purple-700 rounded-lg p-2">
+            <div className="bg-royal-600 rounded-lg p-2">
               <TrendingUp size={20} />
             </div>
             <div>
               <h4 className="font-semibold">ATS Optimization</h4>
-              <p className="text-sm text-purple-200">Keyword matching & scoring</p>
+              <p className="text-sm text-royal-200">Keyword matching & scoring</p>
             </div>
           </div>
           <div className="flex items-start gap-3">

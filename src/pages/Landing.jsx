@@ -16,6 +16,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { MorphingBlob, WaveAnimation } from '../components/ui/GSAPAnimations';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -112,42 +113,42 @@ const Landing = () => {
       title: 'AI Smart Roadmap',
       description:
         'Get personalized daily learning plans that adapt to your progress and timeline.',
-      gradient: 'from-purple-500 to-pink-500',
+      gradient: 'bg-royal-600',
     },
     {
       icon: Target,
       title: 'Adaptive Questions',
       description:
         'Questions that scale difficulty based on your accuracy and speed.',
-      gradient: 'from-blue-500 to-cyan-500',
+      gradient: 'bg-navy-700',
     },
     {
       icon: Code,
       title: 'Code Playground',
       description:
         'Visualize code execution with stack, heap, and variable tracking.',
-      gradient: 'from-green-500 to-emerald-500',
+      gradient: 'bg-royal-700',
     },
     {
       icon: Sparkles,
       title: 'Mock Interviews',
       description:
         'Realistic interview simulations with AI feedback and scoring.',
-      gradient: 'from-orange-500 to-red-500',
+      gradient: 'bg-navy-800',
     },
     {
       icon: TrendingUp,
       title: 'Analytics Dashboard',
       description:
         'Track progress with animated charts and improvement curves.',
-      gradient: 'from-indigo-500 to-purple-500',
+      gradient: 'bg-royal-800',
     },
     {
       icon: Zap,
       title: 'Gamification',
       description:
         'Daily streaks, milestones, and dopamine-driven learning rewards.',
-      gradient: 'from-yellow-500 to-orange-500',
+      gradient: 'bg-navy-600',
     },
   ];
 
@@ -183,29 +184,33 @@ const Landing = () => {
         ref={heroRef}
         className="relative min-h-screen flex items-center justify-center pt-20 pb-32 px-6 overflow-hidden"
       >
-        {/* Animated Background */}
+        {/* Morphing Blob Backgrounds */}
+        <MorphingBlob className="-top-40 -left-40" />
+        <MorphingBlob className="-bottom-40 -right-40" />
+        
+        {/* Subtle Background Elements */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-float"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-royal-500/10 rounded-full blur-3xl animate-float"></div>
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-navy-600/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '1s' }}></div>
         </div>
 
         <div className="container mx-auto relative z-10">
           <div className="text-center max-w-5xl mx-auto">
             {/* Title */}
             <motion.div className="hero-title mb-6">
-              <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-4">
+              <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold mb-4 text-navy-900 dark:text-white">
                 Master Your{' '}
-                <span className="gradient-text">Interview Prep</span>
+                <span className="text-royal-600">Interview Prep</span>
               </h1>
-              <div className="flex items-center justify-center space-x-2 text-blue-400">
-                <Sparkles className="w-6 h-6 animate-pulse" />
+              <div className="flex items-center justify-center space-x-2 text-royal-600 dark:text-royal-400">
+                <Sparkles className="w-6 h-6 animate-pulse-subtle" />
                 <span className="text-xl">AI-Powered Adaptive Learning</span>
-                <Sparkles className="w-6 h-6 animate-pulse" />
+                <Sparkles className="w-6 h-6 animate-pulse-subtle" />
               </div>
             </motion.div>
 
             {/* Subtitle */}
-            <p className="hero-subtitle text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
+            <p className="hero-subtitle text-xl md:text-2xl text-surface-600 dark:text-surface-300 mb-12 max-w-3xl mx-auto">
               Get personalized roadmaps, adaptive questions, mock interviews, and
               stunning visualizations. Transform your preparation with AI.
             </p>
@@ -214,14 +219,14 @@ const Landing = () => {
             <div className="hero-buttons flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-20">
               <Link
                 to="/register"
-                className="px-8 py-4 text-lg font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition-all duration-300 glow flex items-center space-x-2 group"
+                className="px-8 py-4 text-lg font-semibold rounded-xl bg-royal-600 hover:bg-royal-700 text-white transition-all duration-300 shadow-soft-lg flex items-center space-x-2 group"
               >
                 <span>Start Free Today</span>
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Link>
               <Link
                 to="#features"
-                className="px-8 py-4 text-lg font-semibold rounded-xl glass hover:glass-strong transition-all duration-300 flex items-center space-x-2"
+                className="px-8 py-4 text-lg font-semibold rounded-xl border border-surface-300 dark:border-surface-600 hover:border-royal-500 dark:hover:border-royal-400 text-surface-700 dark:text-surface-200 transition-all duration-300 flex items-center space-x-2"
               >
                 <span>Explore Features</span>
               </Link>
@@ -236,10 +241,10 @@ const Landing = () => {
                   whileHover={{ y: -10 }}
                 >
                   <div className="text-4xl mb-3">{card.icon}</div>
-                  <h3 className="text-lg font-semibold mb-2 group-hover:text-blue-400 transition-colors">
+                  <h3 className="text-lg font-semibold mb-2 group-hover:text-royal-600 dark:group-hover:text-royal-400 transition-colors">
                     {card.title}
                   </h3>
-                  <p className="text-sm text-gray-400">{card.description}</p>
+                  <p className="text-sm text-surface-500 dark:text-surface-400">{card.description}</p>
                 </motion.div>
               ))}
             </div>
@@ -254,13 +259,13 @@ const Landing = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
               {stats.map((stat, index) => (
                 <div key={index} className="text-center">
-                  <div className="text-5xl font-bold gradient-text-blue mb-2">
+                  <div className="text-5xl font-bold text-royal-600 dark:text-royal-400 mb-2">
                     <span className="stat-number" data-target={stat.number}>
                       0
                     </span>
                     {stat.suffix}
                   </div>
-                  <div className="text-gray-400 text-sm">{stat.label}</div>
+                  <div className="text-surface-500 dark:text-surface-400 text-sm">{stat.label}</div>
                 </div>
               ))}
             </div>
@@ -272,10 +277,10 @@ const Landing = () => {
       <section ref={featuresRef} id="features" className="py-32 px-6">
         <div className="container mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-bold mb-6">
-              <span className="gradient-text">Powerful Features</span>
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 text-navy-900 dark:text-white">
+              Powerful <span className="text-royal-600">Features</span>
             </h2>
-            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+            <p className="text-xl text-surface-600 dark:text-surface-300 max-w-2xl mx-auto">
               Everything you need to ace your interviews, all in one platform
             </p>
           </div>
@@ -284,18 +289,18 @@ const Landing = () => {
             {features.map((feature, index) => (
               <motion.div
                 key={index}
-                className="feature-card glass-strong rounded-2xl p-8 hover:scale-105 transition-all duration-300 group cursor-pointer"
+                className="feature-card glass-strong rounded-2xl p-8 hover:scale-105 transition-all duration-300 group cursor-pointer border border-surface-200 dark:border-surface-700"
                 whileHover={{ y: -10 }}
               >
                 <div
-                  className={`w-16 h-16 rounded-xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform glow-purple`}
+                  className={`w-16 h-16 rounded-xl ${feature.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-soft-md`}
                 >
                   <feature.icon className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-semibold mb-4 group-hover:text-blue-400 transition-colors">
+                <h3 className="text-2xl font-semibold mb-4 text-navy-900 dark:text-white group-hover:text-royal-600 dark:group-hover:text-royal-400 transition-colors">
                   {feature.title}
                 </h3>
-                <p className="text-gray-400">{feature.description}</p>
+                <p className="text-surface-600 dark:text-surface-400">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -306,8 +311,8 @@ const Landing = () => {
       <section id="how-it-works" className="py-32 px-6 relative">
         <div className="container mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-5xl md:text-6xl font-bold mb-6">
-              <span className="gradient-text">How It Works</span>
+            <h2 className="text-5xl md:text-6xl font-bold mb-6 text-navy-900 dark:text-white">
+              How It <span className="text-royal-600">Works</span>
             </h2>
           </div>
 
@@ -346,20 +351,20 @@ const Landing = () => {
             ].map((item, index) => (
               <motion.div
                 key={index}
-                className="flex items-start space-x-6 glass-strong rounded-2xl p-8"
+                className="flex items-start space-x-6 glass-strong rounded-2xl p-8 border border-surface-200 dark:border-surface-700"
                 initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
               >
-                <div className="text-6xl font-bold gradient-text-blue flex-shrink-0">
+                <div className="text-6xl font-bold text-royal-600 dark:text-royal-400 flex-shrink-0">
                   {item.step}
                 </div>
                 <div>
-                  <h3 className="text-2xl font-semibold mb-2">{item.title}</h3>
-                  <p className="text-gray-400">{item.description}</p>
+                  <h3 className="text-2xl font-semibold mb-2 text-navy-900 dark:text-white">{item.title}</h3>
+                  <p className="text-surface-600 dark:text-surface-400">{item.description}</p>
                 </div>
-                <CheckCircle2 className="w-8 h-8 text-green-400 flex-shrink-0 mt-2" />
+                <CheckCircle2 className="w-8 h-8 text-success-600 flex-shrink-0 mt-2" />
               </motion.div>
             ))}
           </div>
@@ -369,20 +374,20 @@ const Landing = () => {
       {/* CTA Section */}
       <section className="py-32 px-6">
         <div className="container mx-auto">
-          <div className="glass-strong rounded-3xl p-12 md:p-20 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10"></div>
+          <div className="glass-strong rounded-3xl p-12 md:p-20 text-center relative overflow-hidden border border-surface-200 dark:border-surface-700">
+            <div className="absolute inset-0 bg-gradient-to-r from-royal-500/5 to-navy-600/5"></div>
             <div className="relative z-10">
-              <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                Ready to <span className="gradient-text">Transform</span> Your
+              <h2 className="text-5xl md:text-6xl font-bold mb-6 text-navy-900 dark:text-white">
+                Ready to <span className="text-royal-600">Transform</span> Your
                 Prep?
               </h2>
-              <p className="text-xl text-gray-300 mb-12 max-w-2xl mx-auto">
+              <p className="text-xl text-surface-600 dark:text-surface-300 mb-12 max-w-2xl mx-auto">
                 Join thousands of successful candidates who aced their interviews
                 with PrepForge
               </p>
               <Link
                 to="/register"
-                className="inline-flex items-center space-x-2 px-10 py-5 text-xl font-semibold rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition-all duration-300 glow group"
+                className="inline-flex items-center space-x-2 px-10 py-5 text-xl font-semibold rounded-xl bg-royal-600 hover:bg-royal-700 text-white transition-all duration-300 shadow-soft-lg group"
               >
                 <span>Get Started Free</span>
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />

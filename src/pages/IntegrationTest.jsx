@@ -248,7 +248,7 @@ const IntegrationTest = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-cyan-900 p-8">
+    <div className="min-h-screen bg-surface-50 dark:bg-navy-900 p-8">
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -274,42 +274,42 @@ const IntegrationTest = () => {
             <button
               onClick={testBackendConnection}
               disabled={loading}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:from-purple-600 hover:to-blue-600 disabled:opacity-50 transition-all"
+              className="px-6 py-3 bg-navy-700 hover:bg-navy-800 text-white rounded-lg disabled:opacity-50 transition-all"
             >
               Test Backend
             </button>
             <button
               onClick={testFirebaseAuth}
               disabled={loading || !isFirebaseEnabled}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 disabled:opacity-50 transition-all"
+              className="px-6 py-3 bg-royal-600 hover:bg-royal-700 text-white rounded-lg disabled:opacity-50 transition-all"
             >
               Test Firebase Auth
             </button>
             <button
               onClick={testOpenAIQuestions}
               disabled={loading}
-              className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-green-500 text-white rounded-lg hover:from-cyan-600 hover:to-green-600 disabled:opacity-50 transition-all"
+              className="px-6 py-3 bg-success-600 hover:bg-success-700 text-white rounded-lg disabled:opacity-50 transition-all"
             >
               Test OpenAI Questions
             </button>
             <button
               onClick={testOpenAIFeedback}
               disabled={loading}
-              className="px-6 py-3 bg-gradient-to-r from-green-500 to-yellow-500 text-white rounded-lg hover:from-green-600 hover:to-yellow-600 disabled:opacity-50 transition-all"
+              className="px-6 py-3 bg-success-700 hover:bg-success-800 text-white rounded-lg disabled:opacity-50 transition-all"
             >
               Test OpenAI Feedback
             </button>
             <button
               onClick={testStudyCompanion}
               disabled={loading}
-              className="px-6 py-3 bg-gradient-to-r from-yellow-500 to-orange-500 text-white rounded-lg hover:from-yellow-600 hover:to-orange-600 disabled:opacity-50 transition-all"
+              className="px-6 py-3 bg-warning-600 hover:bg-warning-700 text-white rounded-lg disabled:opacity-50 transition-all"
             >
               Test Study Companion
             </button>
             <button
               onClick={runAllTests}
               disabled={loading}
-              className="px-6 py-3 bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 text-white rounded-lg hover:from-purple-600 hover:via-pink-600 hover:to-red-600 disabled:opacity-50 transition-all font-bold"
+              className="px-6 py-3 bg-royal-600 hover:bg-royal-700 text-white rounded-lg disabled:opacity-50 transition-all font-bold"
             >
               🚀 Run All Tests
             </button>

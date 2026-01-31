@@ -52,15 +52,15 @@ const GamificationDashboard = () => {
   return (
     <div className="p-6 space-y-6">
       {/* User Profile Card */}
-      <div className="bg-gradient-to-r from-purple-900 to-indigo-900 rounded-lg p-6 text-white">
+      <div className="bg-navy-800 rounded-lg p-6 text-white">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold">{profile.name}</h2>
-            <p className="text-xl text-purple-200">{profile.title}</p>
+            <p className="text-xl text-surface-300">{profile.title}</p>
           </div>
           <div className="text-right">
             <div className="text-5xl font-bold">Lv {profile.level}</div>
-            <div className="text-sm text-purple-200">{profile.xp} XP</div>
+            <div className="text-sm text-surface-300">{profile.xp} XP</div>
           </div>
         </div>
         
@@ -70,13 +70,13 @@ const GamificationDashboard = () => {
             <span>Level {profile.level}</span>
             <span>Level {profile.level + 1}</span>
           </div>
-          <div className="w-full bg-purple-800 rounded-full h-3">
+          <div className="w-full bg-navy-900 rounded-full h-3">
             <div
-              className="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all duration-500"
+              className="bg-royal-600 h-3 rounded-full transition-all duration-500"
               style={{ width: `${profile.progressToNext}%` }}
             ></div>
           </div>
-          <div className="text-center text-xs text-purple-200 mt-1">
+          <div className="text-center text-xs text-surface-300 mt-1">
             {profile.nextLevelXP - profile.xp} XP to next level
           </div>
         </div>
@@ -252,14 +252,14 @@ const GamificationDashboard = () => {
 
 const StatCard = ({ icon, title, value, color }) => {
   const colorClasses = {
-    blue: 'from-blue-600 to-blue-800',
-    green: 'from-green-600 to-green-800',
-    purple: 'from-purple-600 to-purple-800',
-    orange: 'from-orange-600 to-orange-800',
+    blue: 'bg-royal-600',
+    green: 'bg-success-600',
+    purple: 'bg-navy-700',
+    orange: 'bg-warning-600',
   };
 
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color]} rounded-lg p-6 text-white`}>
+    <div className={`${colorClasses[color]} rounded-lg p-6 text-white`}>
       <div className="flex items-center justify-between mb-2">
         {icon}
         <Zap className="w-5 h-5 text-yellow-300" />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Video,
   Clock,
@@ -13,8 +13,13 @@ import {
   Play,
   Pause,
   RotateCcw,
+  Shield,
+  Eye,
+  EyeOff,
+  AlertTriangle,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useAntiCheat } from '../hooks/useAntiCheat';
 
 const MockInterview = () => {
   const [selectedRound, setSelectedRound] = useState(null);
@@ -23,6 +28,16 @@ const MockInterview = () => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState([]);
   const [showResults, setShowResults] = useState(false);
+  const [showViolationPanel, setShowViolationPanel] = useState(false);
+
+  // Anti-cheat monitoring
+  const antiCheat = useAntiCheat({
+    onViolation: (violation) => {
+      console.warn('🚨 Cheating attempt detected:', violation);
+      // Could send to backend for logging
+    },
+    enableExtensionDetection: true,
+  });
 
   useEffect(() => {
     let interval;
@@ -41,7 +56,7 @@ const MockInterview = () => {
       duration: 30,
       questions: 20,
       description: 'Technical multiple-choice questions',
-      gradient: 'from-blue-500 to-cyan-500',
+      gradient: 'bg-royal-600',
       type: 'mcq',
     },
     {
@@ -50,7 +65,7 @@ const MockInterview = () => {
       duration: 60,
       questions: 3,
       description: 'Solve coding problems',
-      gradient: 'from-purple-500 to-pink-500',
+      gradient: 'bg-navy-700',
       type: 'coding',
     },
     {
@@ -59,7 +74,7 @@ const MockInterview = () => {
       duration: 45,
       questions: 8,
       description: 'Situational and behavioral questions',
-      gradient: 'from-green-500 to-emerald-500',
+      gradient: 'bg-success-600',
       type: 'behavioral',
     },
   ];
@@ -108,11 +123,22 @@ const MockInterview = () => {
     setCurrentQuestion(0);
     setAnswers([]);
     setShowResults(false);
+    
+    // Start anti-cheat monitoring
+    antiCheat.startMonitoring();
+    
+    toast.success('Interview started with anti-cheat protection 🛡️', {
+      duration: 3000,
+    });
   };
 
   const endRound = () => {
     setIsActive(false);
     setShowResults(true);
+    
+    // Stop anti-cheat monitoring
+    antiCheat.stopMonitoring();
+    
     generateFeedback();
   };
 
@@ -136,10 +162,10 @@ const MockInterview = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-12"
           >
-            <h1 className="text-5xl font-bold mb-4">
-              <span className="gradient-text">Mock Interview Simulator</span>
+            <h1 className="text-5xl font-bold mb-4 text-navy-900 dark:text-white">
+              Mock Interview <span className="text-royal-600">Simulator</span>
             </h1>
-            <p className="text-xl text-gray-400">
+            <p className="text-xl text-surface-600 dark:text-surface-400">
               Practice realistic interview scenarios with AI feedback
             </p>
           </motion.div>
@@ -154,7 +180,7 @@ const MockInterview = () => {
                 transition={{ delay: index * 0.1 }}
                 className="glass-strong rounded-2xl p-8 hover:scale-105 transition-all duration-300 group"
               >
-                <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${round.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                <div className={`w-16 h-16 rounded-xl ${round.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
                   <round.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-2xl font-semibold mb-2">{round.name}</h3>
@@ -171,7 +197,7 @@ const MockInterview = () => {
                 </div>
                 <button
                   onClick={() => startRound(round)}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 font-semibold transition-all flex items-center justify-center space-x-2"
+                  className="w-full py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white font-semibold transition-all flex items-center justify-center space-x-2"
                 >
                   <Play className="w-4 h-4" />
                   <span>Start Round</span>
@@ -256,11 +282,11 @@ const MockInterview = () => {
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+            <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-success-600 flex items-center justify-center">
               <Award className="w-12 h-12 text-white" />
             </div>
-            <h1 className="text-4xl font-bold mb-4">Interview Complete! 🎉</h1>
-            <div className="text-6xl font-bold gradient-text mb-2">{score}/100</div>
+            <h1 className="text-4xl font-bold mb-4 text-navy-900 dark:text-white">Interview Complete! 🎉</h1>
+            <div className="text-6xl font-bold text-royal-600 mb-2">{score}/100</div>
             <p className="text-xl text-gray-400">
               {score >= 80 ? 'Excellent Performance!' : score >= 60 ? 'Good Job!' : 'Keep Practicing!'}
             </p>
@@ -326,7 +352,7 @@ const MockInterview = () => {
             </button>
             <button
               onClick={() => startRound(selectedRound)}
-              className="flex-1 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 transition-all font-semibold flex items-center justify-center space-x-2"
+              className="flex-1 py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white transition-all font-semibold flex items-center justify-center space-x-2"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Try Again</span>
@@ -348,12 +374,67 @@ const MockInterview = () => {
               <p className="text-gray-400">Question {currentQuestion + 1} of {selectedRound.questions}</p>
             </div>
             <div className="text-right">
-              <div className="text-4xl font-bold gradient-text">{formatTime(timer)}</div>
-              <div className="text-sm text-gray-400">
+              <div className="text-4xl font-bold text-royal-600">{formatTime(timer)}</div>
+              <div className="text-sm text-surface-500 dark:text-surface-400">
                 Time limit: {selectedRound.duration}:00
               </div>
             </div>
           </div>
+          
+          {/* Anti-Cheat Status Bar */}
+          <div className="mt-4 p-3 rounded-xl bg-royal-50 dark:bg-royal-900/20 border border-royal-200 dark:border-royal-400/30">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Shield className={`w-5 h-5 ${antiCheat.suspiciousActivity ? 'text-red-400' : 'text-green-400'}`} />
+                <div>
+                  <span className="text-sm font-semibold">
+                    {antiCheat.isMonitoring ? '🔒 Anti-Cheat Active' : '🔓 Not Monitoring'}
+                  </span>
+                  <div className="text-xs text-gray-400">
+                    Tab switches: {antiCheat.tabSwitchCount} | Violations: {antiCheat.violations.length}
+                    {antiCheat.suspiciousActivity && <span className="text-red-400 ml-2">⚠️ Suspicious Activity Detected!</span>}
+                  </div>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowViolationPanel(!showViolationPanel)}
+                className="px-3 py-1 rounded-lg glass hover:glass-strong transition-all text-xs"
+              >
+                {showViolationPanel ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+
+          {/* Violation Panel */}
+          <AnimatePresence>
+            {showViolationPanel && antiCheat.violations.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-4 p-4 rounded-xl bg-red-500/10 border border-red-400/30"
+              >
+                <h4 className="text-sm font-semibold text-red-400 mb-2 flex items-center">
+                  <AlertTriangle className="w-4 h-4 mr-2" />
+                  Violation Log
+                </h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {antiCheat.violations.slice(-5).reverse().map((v, i) => (
+                    <div key={i} className="text-xs text-gray-300 flex items-start space-x-2">
+                      <span className="text-red-400">•</span>
+                      <div>
+                        <span className="font-medium">{v.type}</span>
+                        <span className="text-gray-500 ml-2">
+                          {new Date(v.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <div className="mt-4 flex space-x-4">
             <button
               onClick={() => setIsActive(!isActive)}
@@ -437,7 +518,7 @@ const MockInterview = () => {
                 endRound();
               }
             }}
-            className="w-full mt-6 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 font-semibold transition-all"
+            className="w-full mt-6 py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white font-semibold transition-all"
           >
             {currentQuestion < selectedRound.questions - 1 ? 'Next Question' : 'Finish Interview'}
           </button>
