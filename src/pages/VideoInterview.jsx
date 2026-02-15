@@ -17,12 +17,14 @@ import {
   Minimize,
 } from 'lucide-react';
 import { gsap } from 'gsap';
-import toast from 'react-hot-toast';
+import { showSuccess, showError, showInfo } from '../utils/toast';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTracking } from '../contexts/TrackingContext';
 
 const VideoInterview = () => {
   const navigate = useNavigate();
   const { interviewId } = useParams();
+  const { trackPageView, track } = useTracking();
   
   const [isInLobby, setIsInLobby] = useState(true);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
@@ -37,6 +39,11 @@ const VideoInterview = () => {
     camera: 'checking',
     microphone: 'checking',
   });
+
+  // Track page view
+  useEffect(() => {
+    trackPageView('/video-interview');
+  }, [trackPageView]);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -130,7 +137,7 @@ const VideoInterview = () => {
         camera: error.name === 'NotFoundError' ? 'not-found' : 'denied',
         microphone: error.name === 'NotFoundError' ? 'not-found' : 'denied',
       });
-      toast.error('Unable to access camera/microphone');
+      showError('Unable to access camera/microphone');
     }
   };
 
@@ -183,7 +190,7 @@ const VideoInterview = () => {
       peerConnection.onconnectionstatechange = () => {
         console.log('Connection state:', peerConnection.connectionState);
         if (peerConnection.connectionState === 'connected') {
-          toast.success('Connected to interviewer');
+          showSuccess('Connected to interviewer');
         }
       };
 
@@ -194,13 +201,13 @@ const VideoInterview = () => {
 
     } catch (error) {
       console.error('WebRTC initialization error:', error);
-      toast.error('Failed to establish connection');
+      showError('Failed to establish connection');
     }
   };
 
   const simulateRemoteConnection = () => {
     // In production, this would be handled by signaling server
-    toast.success('Interviewer joined the room');
+    showSuccess('Interviewer joined the room');
   };
 
   const toggleVideo = () => {
@@ -250,10 +257,10 @@ const VideoInterview = () => {
       }
 
       setScreenSharing(true);
-      toast.success('Screen sharing started');
+      showSuccess('Screen sharing started');
     } catch (error) {
       console.error('Screen share error:', error);
-      toast.error('Failed to share screen');
+      showError('Failed to share screen');
     }
   };
 
@@ -276,7 +283,7 @@ const VideoInterview = () => {
     }
 
     setScreenSharing(false);
-    toast.info('Screen sharing stopped');
+    showInfo('Screen sharing stopped');
   };
 
   const toggleFullscreen = () => {
@@ -306,7 +313,7 @@ const VideoInterview = () => {
         },
       });
 
-      toast.success('Interview completed');
+      showSuccess('Interview completed');
     }
   };
 
@@ -331,7 +338,7 @@ const VideoInterview = () => {
 
   const joinInterview = () => {
     if (deviceStatus.camera !== 'ready' || deviceStatus.microphone !== 'ready') {
-      toast.error('Please allow camera and microphone access');
+      showError('Please allow camera and microphone access');
       return;
     }
 
@@ -361,9 +368,9 @@ const VideoInterview = () => {
   const nextQuestion = () => {
     if (currentQuestion < interviewQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
-      toast.info('Moving to next question');
+      showInfo('Moving to next question');
     } else {
-      toast.success('All questions completed!');
+      showSuccess('All questions completed!');
     }
   };
 
@@ -575,7 +582,7 @@ const VideoInterview = () => {
   return (
     <div
       ref={roomRef}
-      className="min-h-screen bg-gradient-to-br from-[#0c0c1d] via-[#111133] to-[#1a0b2e] p-4"
+      className="min-h-screen bg-gradient-to-br from-[#0c0c1d] via-[#111133] to-[#1a0b2e] p-4 pt-20"
     >
       <div className="max-w-7xl mx-auto h-screen flex flex-col">
         {/* Header */}

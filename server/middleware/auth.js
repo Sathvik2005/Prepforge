@@ -19,8 +19,30 @@ const verifyJWT = (token) => {
 };
 
 /**
+ * Detect if token is a Firebase ID token
+ * Firebase tokens have a specific structure with 3 parts and start with 'eyJ'
+ */
+const isFirebaseToken = (token) => {
+  try {
+    // Firebase tokens are longer (typically 800+ chars) and have specific structure
+    if (!token || token.length < 100) return false;
+    
+    const parts = token.split('.');
+    if (parts.length !== 3) return false;
+    
+    // Decode the header to check if it's from Firebase
+    const header = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+    
+    // Firebase tokens have 'RS256' algorithm and 'kid' field
+    return header.alg === 'RS256' && header.kid !== undefined;
+  } catch {
+    return false;
+  }
+};
+
+/**
  * Main authentication middleware
- * Tries Firebase first (if enabled), falls back to JWT
+ * Intelligently routes between Firebase and JWT based on token format
  */
 const authMiddleware = async (req, res, next) => {
   try {
@@ -34,14 +56,17 @@ const authMiddleware = async (req, res, next) => {
       });
     }
 
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(' ')[1].trim();
 
     if (!token) {
       return res.status(401).json({ message: 'Token is empty' });
     }
 
-    // Strategy 1: Try Firebase authentication (if enabled)
-    if (isFirebaseEnabled()) {
+    // Detect token type and route accordingly
+    const useFirebase = isFirebaseEnabled() && isFirebaseToken(token);
+
+    // Strategy 1: Firebase authentication (for Firebase ID tokens)
+    if (useFirebase) {
       try {
         const firebaseUser = await verifyFirebaseToken(token);
         
@@ -64,6 +89,7 @@ const authMiddleware = async (req, res, next) => {
           email: user.email,
           name: user.name,
           firebaseUid: firebaseUser.uid,
+          uid: user._id.toString(), // Backward compatibility
           authMethod: 'firebase'
         };
         
@@ -72,8 +98,12 @@ const authMiddleware = async (req, res, next) => {
 
         return next();
       } catch (firebaseError) {
-        // Firebase verification failed, try JWT
-        console.log('Firebase auth failed, trying JWT:', firebaseError.message);
+        // Firebase verification failed
+        console.warn('Firebase token verification failed:', firebaseError.message);
+        return res.status(401).json({ 
+          message: 'Invalid Firebase token',
+          details: firebaseError.message
+        });
       }
     }
 
@@ -108,6 +138,7 @@ const authMiddleware = async (req, res, next) => {
       id: user._id.toString(),
       email: user.email,
       name: user.name,
+      uid: user._id.toString(), // Backward compatibility
       authMethod: 'jwt'
     };
     

@@ -1,34 +1,8 @@
-import OpenAI from 'openai';
-import dotenv from 'dotenv';
-
-dotenv.config();
-
-let openaiClient = null;
-
-// Initialize OpenAI client
-const initOpenAI = () => {
-  if (!openaiClient && process.env.OPENAI_API_KEY) {
-    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  }
-  return openaiClient;
-};
-
-const isOpenAIAvailable = () => {
-  return !!process.env.OPENAI_API_KEY;
-};
+import * as aiService from './aiService.js';
 
 // AI-powered bullet point enhancement
 export async function enhanceBulletPoint(bulletPoint, context = {}) {
-  if (!isOpenAIAvailable()) {
-    console.log('⚠️  OpenAI not configured, returning original text');
-    return { enhanced: bulletPoint, aiGenerated: false };
-  }
-
   try {
-    const client = initOpenAI();
-    if (!client) {
-      return { enhanced: bulletPoint, aiGenerated: false };
-    }
     
     const { position, company, industry } = context;
     
@@ -51,23 +25,21 @@ Requirements:
 
 Enhanced bullet point:`;
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert resume writer specializing in creating impactful, ATS-optimized bullet points. Focus on achievements, metrics, and results.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+    const response = await aiService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an expert resume writer specializing in creating impactful, ATS-optimized bullet points. Focus on achievements, metrics, and results.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ], {
       temperature: 0.7,
       max_tokens: 200,
     });
 
-    const enhanced = response.choices[0].message.content.trim();
+    const enhanced = response.content.trim();
     console.log('✅ Bullet point enhanced with AI');
     
     return { enhanced, aiGenerated: true };
@@ -79,15 +51,7 @@ Enhanced bullet point:`;
 
 // Generate professional summary
 export async function generateSummary(profile) {
-  if (!isOpenAIAvailable()) {
-    return { summary: '', aiGenerated: false };
-  }
-
   try {
-    const client = initOpenAI();
-    if (!client) {
-      return { summary: '', aiGenerated: false };
-    }
     
     const { name, position, yearsExperience, skills, industry } = profile;
     
@@ -109,23 +73,21 @@ Requirements:
 
 Professional Summary:`;
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert resume writer creating compelling professional summaries that capture candidate value.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+    const response = await aiService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an expert resume writer creating compelling professional summaries that capture candidate value.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ], {
       temperature: 0.7,
       max_tokens: 300,
     });
 
-    const summary = response.choices[0].message.content.trim();
+    const summary = response.content.trim();
     console.log('✅ Professional summary generated with AI');
     
     return { summary, aiGenerated: true };
@@ -137,15 +99,7 @@ Professional Summary:`;
 
 // Optimize resume for specific job description
 export async function optimizeForJob(resumeData, jobDescription) {
-  if (!isOpenAIAvailable()) {
-    return { suggestions: [], aiGenerated: false };
-  }
-
   try {
-    const client = initOpenAI();
-    if (!client) {
-      return { suggestions: [], aiGenerated: false };
-    }
     
     const prompt = `Analyze this resume against the job description and provide optimization suggestions.
 
@@ -166,24 +120,21 @@ Provide 5-7 specific, actionable suggestions to optimize this resume for the job
 
 Format as a JSON array of objects with "type" and "suggestion" fields.`;
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an ATS optimization expert. Analyze resumes and provide specific suggestions to improve match scores.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+    const response = await aiService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an ATS optimization expert. Analyze resumes and provide specific suggestions to improve match scores.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ], {
       temperature: 0.6,
       max_tokens: 800,
-      response_format: { type: 'json_object' },
     });
 
-    const result = JSON.parse(response.choices[0].message.content);
+    const result = JSON.parse(response.content);
     console.log('✅ Job optimization suggestions generated');
     
     return { suggestions: result.suggestions || [], aiGenerated: true };
@@ -195,15 +146,7 @@ Format as a JSON array of objects with "type" and "suggestion" fields.`;
 
 // Generate project description
 export async function generateProjectDescription(projectName, technologies) {
-  if (!isOpenAIAvailable()) {
-    return { description: '', aiGenerated: false };
-  }
-
   try {
-    const client = initOpenAI();
-    if (!client) {
-      return { description: '', aiGenerated: false };
-    }
     
     const prompt = `Create a professional resume project description (2-3 sentences) for:
 
@@ -217,23 +160,21 @@ Requirements:
 4. Use professional language
 5. Keep it concise (2-3 sentences)
 
-Project Description:`;    const response = await client.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a resume writer creating compelling project descriptions that showcase technical skills.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+Project Description:`;    const response = await aiService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are a resume writer creating compelling project descriptions that showcase technical skills.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ], {
       temperature: 0.7,
       max_tokens: 200,
     });
 
-    const description = response.choices[0].message.content.trim();
+    const description = response.content.trim();
     console.log('✅ Project description generated');
     
     return { description, aiGenerated: true };
@@ -245,15 +186,7 @@ Project Description:`;    const response = await client.chat.completions.create(
 
 // Extract skills from job description
 export async function extractSkillsFromJob(jobDescription) {
-  if (!isOpenAIAvailable()) {
-    return { skills: [], aiGenerated: false };
-  }
-
   try {
-    const client = initOpenAI();
-    if (!client) {
-      return { skills: {}, aiGenerated: false };
-    }
     
     const prompt = `Extract all technical skills, tools, and technologies mentioned in this job description:
 
@@ -267,24 +200,21 @@ Categorize them into:
 
 Format as JSON with these categories as keys and arrays of skills as values.`;
 
-    const response = await client.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a skill extraction expert. Identify all relevant technical and soft skills from job descriptions.',
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
+    const response = await aiService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are a skill extraction expert. Identify all relevant technical and soft skills from job descriptions.',
+      },
+      {
+        role: 'user',
+        content: prompt,
+      },
+    ], {
       temperature: 0.3,
       max_tokens: 500,
-      response_format: { type: 'json_object' },
     });
 
-    const skills = JSON.parse(response.choices[0].message.content);
+    const skills = JSON.parse(response.content);
     console.log('✅ Skills extracted from job description');
     
     return { skills, aiGenerated: true };

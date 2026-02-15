@@ -7,20 +7,25 @@ export const useAuthStore = create(
       user: null,
       token: null,
       isAuthenticated: false,
+      initialized: false,
 
       login: (userData, token) => {
+        console.log('🔐 Login:', userData.email);
         set({
           user: userData,
           token: token,
           isAuthenticated: true,
+          initialized: true,
         });
       },
 
       logout: () => {
+        console.log('🔓 Logout');
         set({
           user: null,
           token: null,
           isAuthenticated: false,
+          initialized: true,
         });
       },
 
@@ -28,6 +33,14 @@ export const useAuthStore = create(
         set((state) => ({
           user: { ...state.user, ...userData },
         }));
+      },
+
+      updateToken: (token) => {
+        set({ token });
+      },
+
+      setInitialized: () => {
+        set({ initialized: true });
       },
     }),
     {

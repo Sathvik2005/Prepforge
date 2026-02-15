@@ -17,7 +17,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { gsap } from 'gsap';
-import toast from 'react-hot-toast';
+import { showSuccess, showError } from '../utils/toast';
 import { useNavigate } from 'react-router-dom';
 
 const InterviewScheduling = () => {
@@ -191,7 +191,7 @@ const InterviewScheduling = () => {
   // Book interview
   const handleBookInterview = async () => {
     if (!selectedDate || !selectedSlot || !selectedInterviewer || !selectedType || !interviewMode) {
-      toast.error('Please complete all selections');
+      showError('Please complete all selections');
       return;
     }
 
@@ -228,7 +228,7 @@ const InterviewScheduling = () => {
       }
     }, 100);
 
-    toast.success('Interview scheduled successfully! 🎉');
+    showSuccess('Interview scheduled successfully! 🎉');
 
     // Save to localStorage (mock backend)
     const existingBookings = JSON.parse(localStorage.getItem('interviews') || '[]');

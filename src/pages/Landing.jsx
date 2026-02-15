@@ -182,7 +182,7 @@ const Landing = () => {
       {/* Hero Section */}
       <section
         ref={heroRef}
-        className="relative min-h-screen flex items-center justify-center pt-20 pb-32 px-6 overflow-hidden"
+        className="relative min-h-screen flex items-center justify-center pt-32 pb-32 px-6 overflow-hidden"
       >
         {/* Morphing Blob Backgrounds */}
         <MorphingBlob className="-top-40 -left-40" />

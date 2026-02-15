@@ -1,8 +1,16 @@
-import express from 'express';
-import cors from 'cors';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+
+// Get current directory for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables from root directory FIRST (before other imports)
+dotenv.config({ path: resolve(__dirname, '../.env') });
+
+import express from 'express';
+import cors from 'cors';
 import mongoose from 'mongoose';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
@@ -23,18 +31,18 @@ import liveInterviewRoutes from './routes/liveInterview.js';
 import improvedInterviewRoutes from './routes/improvedInterview.js';
 import mediaRoutes from './routes/media.js';
 import dsaProgressRoutes from './routes/dsaProgress.js';
-import { initializeFirebase } from './config/firebase.js';
+import sheetsRoutes from './routes/sheets.js';
+import roadmapRoutes from './routes/roadmap.js';
+import trackingRoutes from './routes/tracking.js';
+// import resumeAnalysisRoutes from './routes/resumeAnalysis.js'; // Temporarily disabled - using resumeGenome instead
+import resumeGenomeRoutes from './routes/resumeGenome.js';
+import codeExecutionRoutes from './routes/codeExecution.js';
+import { initializeFirebase } from '././config/firebase.js';
 import { initializeOpenAI } from './config/openai.js';
 import { setupCollaborationHandlers } from './sockets/collaborationHandlers.js';
 import { setupInterviewHandlers } from './sockets/interviewHandlers.js';
 import setupInterviewSocket from './sockets/interviewSocket.js';
-
-// Get current directory for ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-// Load environment variables from root directory
-dotenv.config({ path: resolve(__dirname, '../.env') });
+import socketAuthMiddleware from './middleware/socketAuth.js';
 
 // Verify critical environment variables
 console.log('🔍 Environment Configuration Check:');
@@ -50,6 +58,7 @@ const io = new Server(httpServer, {
   cors: {
     origin: [
       'http://localhost:3000', 
+      'http://localhost:3001',
       'http://localhost:5173',
       process.env.FRONTEND_URL
     ].filter(Boolean),
@@ -58,12 +67,16 @@ const io = new Server(httpServer, {
   },
 });
 
+// Apply Socket.IO authentication middleware
+io.use(socketAuthMiddleware);
+
 const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
   origin: [
     'http://localhost:3000',
+    'http://localhost:3001',
     'http://localhost:5173', 
     process.env.FRONTEND_URL
   ].filter(Boolean),
@@ -88,6 +101,9 @@ if (!openaiInitialized) {
 setupCollaborationHandlers(io);
 setupInterviewHandlers(io); // Legacy real-time interview handlers
 setupInterviewSocket(io); // NEW: Improved dynamic interview handlers
+
+// Make IO instance available to routes
+app.set('io', io);
 
 // MongoDB Connection with SSL/TLS Configuration
 let connectionAttempts = 0;
@@ -169,6 +185,12 @@ app.use('/api/interview', liveInterviewRoutes); // Real-Time Adaptive Interviews
 app.use('/api/interview/v3', improvedInterviewRoutes); // NEW: Fully Dynamic Interviews (V3)
 app.use('/api/media', mediaRoutes); // NEW: Media upload for video interviews
 app.use('/api/dsa-progress', dsaProgressRoutes); // DSA Sheets & Playlist Progress Tracking
+app.use('/api/sheets', sheetsRoutes); // DSA Sheets Management & Progress
+app.use('/api/roadmap', roadmapRoutes); // AI Roadmap Generator
+app.use('/api/tracking', trackingRoutes); // Real-time User Activity Tracking
+// app.use('/api/resume-analysis', resumeAnalysisRoutes); // Temporarily disabled - using resumeGenome instead
+app.use('/api/resume-genome', resumeGenomeRoutes); // Resume Analysis with OpenAI
+app.use('/api/code-execution', codeExecutionRoutes); // Secure Code Execution & Analysis
 
 // Health Check
 app.get('/api/health', (req, res) => {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import {
   Video,
   VideoOff,
@@ -16,7 +17,7 @@ import {
   Send,
 } from 'lucide-react';
 import { gsap } from 'gsap';
-import toast from 'react-hot-toast';
+import { showSuccess, showError, showInfo, showLoading } from '../utils/toast';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const AsyncInterview = () => {
@@ -123,16 +124,16 @@ const AsyncInterview = () => {
       }
 
       setDeviceReady(true);
-      toast.success('Camera and microphone ready');
+      showSuccess('Camera and microphone ready');
     } catch (error) {
       console.error('Camera initialization error:', error);
-      toast.error('Unable to access camera/microphone');
+      showError('Unable to access camera/microphone');
     }
   };
 
   const startRecording = () => {
     if (!streamRef.current) {
-      toast.error('Camera not ready');
+      showError('Camera not ready');
       return;
     }
 
@@ -168,16 +169,16 @@ const AsyncInterview = () => {
           timestamp: new Date().toISOString(),
         };
         setVideoBlobs(newVideoBlobs);
-        toast.success('Answer recorded');
+        showSuccess('Answer recorded');
       };
 
       mediaRecorder.start(100); // Collect data every 100ms
       setIsRecording(true);
       setRecordedTime(0);
-      toast.info('Recording started');
+      showInfo('Recording started');
     } catch (error) {
       console.error('Recording start error:', error);
-      toast.error('Failed to start recording');
+      showError('Failed to start recording');
     }
   };
 
@@ -185,7 +186,7 @@ const AsyncInterview = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.pause();
       setIsPaused(true);
-      toast.info('Recording paused');
+      showInfo('Recording paused');
     }
   };
 
@@ -193,7 +194,7 @@ const AsyncInterview = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
       mediaRecorderRef.current.resume();
       setIsPaused(false);
-      toast.info('Recording resumed');
+      showInfo('Recording resumed');
     }
   };
 
@@ -211,7 +212,7 @@ const AsyncInterview = () => {
       newVideoBlobs[currentQuestion] = null;
       setVideoBlobs(newVideoBlobs);
       setRecordedTime(0);
-      toast.info('Ready to record again');
+      showInfo('Ready to record again');
     }
   };
 
@@ -227,17 +228,17 @@ const AsyncInterview = () => {
 
   const nextQuestion = () => {
     if (!videoBlobs[currentQuestion]) {
-      toast.error('Please record your answer first');
+      showError('Please record your answer first');
       return;
     }
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
       setRecordedTime(0);
-      toast.info('Moving to next question');
+      showInfo('Moving to next question');
     } else {
       // All questions answered
-      toast.success('All questions completed!');
+      showSuccess('All questions completed!');
     }
   };
 
@@ -253,7 +254,7 @@ const AsyncInterview = () => {
     const unanswered = questions.filter((_, idx) => !videoBlobs[idx]);
     
     if (unanswered.length > 0) {
-      toast.error(`Please answer all questions (${unanswered.length} remaining)`);
+      showError(`Please answer all questions (${unanswered.length} remaining)`);
       return;
     }
 
@@ -262,7 +263,7 @@ const AsyncInterview = () => {
     }
 
     // Simulate upload
-    toast.loading('Uploading interview...');
+    const loadingId = showLoading('Uploading interview...');
 
     try {
       // In production, upload to server/cloud storage
@@ -288,8 +289,10 @@ const AsyncInterview = () => {
         totalDuration: videoBlobs.reduce((sum, v) => sum + (v?.duration || 0), 0),
       }));
 
-      toast.dismiss();
-      toast.success('Interview submitted successfully!');
+      if (typeof loadingId === 'string') {
+        toast.dismiss(loadingId);
+      }
+      showSuccess('Interview submitted successfully!');
       setSubmitted(true);
 
       // Animate completion
@@ -297,8 +300,10 @@ const AsyncInterview = () => {
         navigate('/dashboard');
       }, 3000);
     } catch (error) {
-      toast.dismiss();
-      toast.error('Upload failed. Please try again.');
+      if (typeof loadingId === 'string') {
+        toast.dismiss(loadingId);
+      }
+      showError('Upload failed. Please try again.');
     }
   };
 

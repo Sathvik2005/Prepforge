@@ -2,11 +2,7 @@ import QuestionBank from '../models/QuestionBank.js';
 import SkillGap from '../models/SkillGap.js';
 import JobDescription from '../models/JobDescription.js';
 import ParsedResume from '../models/ParsedResume.js';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import * as openrouterService from './openrouterService.js';
 
 /**
  * QuestionGenerationService
@@ -61,19 +57,18 @@ Return a JSON object with this structure:
   "followUpQuestions": ["follow-up if answer is shallow", "another follow-up"]
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert technical interviewer. Generate questions that truly assess understanding, not memorization.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
+    const response = await openrouterService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an expert technical interviewer. Generate questions that truly assess understanding, not memorization.',
+      },
+      { role: 'user', content: prompt },
+    ], {
+      temperature: 0.7,
+      max_tokens: 500
     });
     
-    const generated = JSON.parse(response.choices[0].message.content);
+    const generated = JSON.parse(response.content);
     
     // Store in QuestionBank
     question = new QuestionBank({
@@ -163,19 +158,18 @@ Return JSON:
   "followUpQuestions": ["if shallow answer", "if missing key concepts"]
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert at identifying skill gaps through targeted questions.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
+    const response = await openrouterService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an expert at identifying skill gaps through targeted questions.',
+      },
+      { role: 'user', content: prompt },
+    ], {
+      temperature: 0.7,
+      max_tokens: 500
     });
     
-    const generated = JSON.parse(response.choices[0].message.content);
+    const generated = JSON.parse(response.content);
     
     question = new QuestionBank({
       question: generated.question,
@@ -266,19 +260,18 @@ Return JSON:
   "followUpQuestions": ["contextual follow-ups"]
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an expert recruiter crafting role-specific interview questions.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
+    const response = await openrouterService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an expert recruiter crafting role-specific interview questions.',
+      },
+      { role: 'user', content: prompt },
+    ], {
+      temperature: 0.7,
+      max_tokens: 500
     });
     
-    const generated = JSON.parse(response.choices[0].message.content);
+    const generated = JSON.parse(response.content);
     
     question = new QuestionBank({
       question: generated.question,
@@ -348,19 +341,18 @@ Return JSON:
   "requiredConcepts": ["what should be in a good answer"]
 }`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an interviewer following up on a weak answer. Be professional and give the candidate a fair opportunity.',
-        },
-        { role: 'user', content: prompt },
-      ],
-      response_format: { type: 'json_object' },
+    const response = await openrouterService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an interviewer following up on a weak answer. Be professional and give the candidate a fair opportunity.',
+      },
+      { role: 'user', content: prompt },
+    ], {
+      temperature: 0.7,
+      max_tokens: 300
     });
     
-    const generated = JSON.parse(response.choices[0].message.content);
+    const generated = JSON.parse(response.content);
     
     const question = new QuestionBank({
       question: generated.question,

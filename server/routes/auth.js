@@ -2,11 +2,13 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { verifyFirebaseToken, isFirebaseEnabled } from '../config/firebase.js';
+import { authLimiter } from '../middleware/rateLimiter.js';
+import { isValidEmail, sanitizeText } from '../utils/validation.js';
 
 const router = express.Router();
 
 // Register
-router.post('/register', async (req, res) => {
+router.post('/register', authLimiter, async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
@@ -40,7 +42,7 @@ router.post('/register', async (req, res) => {
 });
 
 // Login
-router.post('/login', async (req, res) => {
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

@@ -16,15 +16,30 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '../store/authStore';
+import { useTracking } from '../contexts/TrackingContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Dashboard = () => {
   const { user } = useAuthStore();
+  const { trackPageView, metrics, refreshMetrics } = useTracking();
   const statsRef = useRef(null);
   const cardsRef = useRef(null);
   const [streak, setStreak] = useState(7);
+
+  // Track page view and refresh metrics
+  useEffect(() => {
+    trackPageView('/dashboard');
+    refreshMetrics();
+  }, [trackPageView, refreshMetrics]);
+
+  // Update streak from metrics
+  useEffect(() => {
+    if (metrics?.dailyStreak) {
+      setStreak(metrics.dailyStreak);
+    }
+  }, [metrics]);
 
   useEffect(() => {
     // Animate stats on mount
@@ -115,14 +130,14 @@ const Dashboard = () => {
     {
       icon: Target,
       label: 'Questions Solved',
-      value: 248,
+      value: metrics?.problemsSolved || 248,
       change: '+12%',
       color: 'bg-royal-600',
     },
     {
       icon: TrendingUp,
       label: 'Accuracy Rate',
-      value: 88,
+      value: Math.round(metrics?.successRate) || 88,
       suffix: '%',
       change: '+5%',
       color: 'bg-success-600',
@@ -130,7 +145,7 @@ const Dashboard = () => {
     {
       icon: Clock,
       label: 'Study Hours',
-      value: 51,
+      value: Math.floor((metrics?.totalTimeSpent || 0) / 3600) || 51,
       suffix: 'h',
       change: '+8h',
       color: 'bg-navy-700',
@@ -138,7 +153,7 @@ const Dashboard = () => {
     {
       icon: Award,
       label: 'Mock Interviews',
-      value: 12,
+      value: metrics?.mockInterviewsCompleted || 12,
       change: '+3',
       color: 'bg-royal-700',
     },

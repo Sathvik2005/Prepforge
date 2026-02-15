@@ -8,6 +8,8 @@ import {
   TrendingUp, TrendingDown, Target, Clock, Calendar,
   Award, Activity, Brain, Zap, Users, AlertCircle
 } from 'lucide-react';
+import { analyticsAPI, gamificationAPI } from '../services/api';
+import { showError } from '../utils/toast';
 import './AnalyticsDashboard.css';
 
 const AnalyticsDashboard = () => {
@@ -28,14 +30,8 @@ const AnalyticsDashboard = () => {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      
-      const token = localStorage.getItem('token');
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
 
-      // Fetch all analytics data in parallel
+      // Fetch all analytics data in parallel using API service
       const [
         dashboardRes,
         trendsRes,
@@ -45,32 +41,25 @@ const AnalyticsDashboard = () => {
         topicMasteryRes,
         leaderboardRes
       ] = await Promise.all([
-        fetch(`/api/analytics/dashboard?days=${timeRange}`, { headers }),
-        fetch(`/api/analytics/trends?days=${timeRange}`, { headers }),
-        fetch('/api/analytics/predictions', { headers }),
-        fetch('/api/analytics/strengths-weaknesses', { headers }),
-        fetch('/api/analytics/study-patterns', { headers }),
-        fetch('/api/analytics/topic-mastery', { headers }),
-        fetch('/api/analytics/leaderboard', { headers })
+        analyticsAPI.getDashboard().catch(e => ({ data: null })),
+        analyticsAPI.getTrends(timeRange).catch(e => ({ data: [] })),
+        analyticsAPI.getPredictions().catch(e => ({ data: null })),
+        analyticsAPI.getStrengthsWeaknesses().catch(e => ({ data: null })),
+        analyticsAPI.getStudyPatterns().catch(e => ({ data: null })),
+        analyticsAPI.getTopicMastery().catch(e => ({ data: {} })),
+        gamificationAPI.getLeaderboard('weekly', 10).catch(e => ({ data: null }))
       ]);
 
-      const dashboard = await dashboardRes.json();
-      const trendsData = await trendsRes.json();
-      const predictionsData = await predictionsRes.json();
-      const strengthsWeaknessesData = await strengthsWeaknessesRes.json();
-      const studyPatternsData = await studyPatternsRes.json();
-      const topicMasteryData = await topicMasteryRes.json();
-      const leaderboardData = await leaderboardRes.json();
-
-      setDashboardData(dashboard.data);
-      setTrends(trendsData.data || []);
-      setPredictions(predictionsData.data);
-      setStrengthsWeaknesses(strengthsWeaknessesData.data);
-      setStudyPatterns(studyPatternsData.data);
-      setTopicMastery(topicMasteryData.data || {});
-      setLeaderboard(leaderboardData.data);
+      setDashboardData(dashboardRes.data);
+      setTrends(trendsRes.data || []);
+      setPredictions(predictionsRes.data);
+      setStrengthsWeaknesses(strengthsWeaknessesRes.data);
+      setStudyPatterns(studyPatternsRes.data);
+      setTopicMastery(topicMasteryRes.data || {});
+      setLeaderboard(leaderboardRes.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
+      showError('Failed to load analytics data');
     } finally {
       setLoading(false);
     }

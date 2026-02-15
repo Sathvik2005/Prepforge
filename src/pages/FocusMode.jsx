@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Pause, RotateCcw, X, Volume2, VolumeX } from 'lucide-react';
+import { useTracking } from '../contexts/TrackingContext';
 
 const FocusMode = () => {
+  const { trackPageView, trackFocusMode } = useTracking();
   const [timeLeft, setTimeLeft] = useState(25 * 60); // 25 minutes in seconds
   const [isActive, setIsActive] = useState(false);
   const [mode, setMode] = useState('focus'); // focus, short-break, long-break
@@ -14,6 +16,12 @@ const FocusMode = () => {
     shortBreak: 5,
     longBreak: 15,
   });
+  const [sessionStartTime, setSessionStartTime] = useState(null);
+
+  // Track page view
+  useEffect(() => {
+    trackPageView('/focus-mode');
+  }, [trackPageView]);
 
   useEffect(() => {
     let interval = null;
@@ -40,6 +48,12 @@ const FocusMode = () => {
     }
 
     if (mode === 'focus') {
+      // Track completed focus session
+      const duration = settings.focus * 60;
+      if (sessionStartTime) {
+        trackFocusMode('end', mode, duration);
+      }
+      
       setSessions((prev) => prev + 1);
       if ((sessions + 1) % 4 === 0) {
         switchMode('long-break');
@@ -58,7 +72,15 @@ const FocusMode = () => {
   };
 
   const toggleTimer = () => {
-    setIsActive(!isActive);
+    const newIsActive = !isActive;
+    setIsActive(newIsActive);
+    
+    // Track when starting a focus session
+    if (newIsActive && mode === 'focus' && !sessionStartTime) {
+      setSessionStartTime(Date.now());
+      const duration = settings.focus * 60;
+      trackFocusMode('start', mode, duration);
+    }
   };
 
   const resetTimer = () => {
@@ -75,7 +97,7 @@ const FocusMode = () => {
   const progress = ((settings[mode === 'focus' ? 'focus' : mode === 'short-break' ? 'shortBreak' : 'longBreak'] * 60 - timeLeft) / (settings[mode === 'focus' ? 'focus' : mode === 'short-break' ? 'shortBreak' : 'longBreak'] * 60)) * 100;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center px-6 pt-20 relative overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0">
         <motion.div

@@ -1,9 +1,5 @@
-import OpenAI from 'openai';
+import * as openrouterService from './openrouterService.js';
 import SkillGap from '../models/SkillGap.js';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 /**
  * EvaluationEngine
@@ -126,19 +122,18 @@ Return a JSON object with:
 Only extract, do NOT evaluate quality.`;
 
     try {
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo',
-        messages: [
-          {
-            role: 'system',
-            content: 'You extract concepts from text. You do NOT evaluate or judge quality.',
-          },
-          { role: 'user', content: prompt },
-        ],
-        response_format: { type: 'json_object' },
+      const response = await openrouterService.createChatCompletion([
+        {
+          role: 'system',
+          content: 'You extract concepts from text. You do NOT evaluate or judge quality.',
+        },
+        { role: 'user', content: prompt },
+      ], {
+        temperature: 0.3,
+        max_tokens: 500
       });
       
-      return JSON.parse(response.choices[0].message.content);
+      return JSON.parse(response.content);
     } catch (error) {
       console.error('Concept extraction failed:', error);
       return {

@@ -15,13 +15,7 @@ import MistakePattern from '../models/MistakePattern.js';
 import Progress from '../models/Progress.js';
 import LearningBehavior from '../models/LearningBehavior.js';
 import Question from '../models/Question.js';
-import { 
-  generateInterviewQuestionGPT, 
-  generateInterviewFeedbackGPT, 
-  generateStudyCompanionResponse, 
-  analyzeCodeMistake,
-  isOpenAIEnabled 
-} from '../config/openai.js';
+import * as openrouterService from './openrouterService.js';
 
 // ========================================
 // 1. MISTAKE PATTERN ANALYSIS
@@ -375,33 +369,28 @@ async function generateActionPlan(mistakeProfile) {
 async function generateInterviewQuestion(params) {
   const { role, difficulty, format, topic, count = 1 } = params;
   
-  // Try OpenAI first if available
-  if (isOpenAIEnabled()) {
-    try {
-      console.log('🤖 Generating question using OpenAI GPT-4...');
-      const gptQuestion = await generateInterviewQuestionGPT({ role, difficulty, format, topic });
-      
+  // Use OpenRouter for interview question generation
+  try {
+    console.log('🤖 Generating question using OpenRouter...');
+    const result = await openrouterService.generateInterviewQuestion({ role, difficulty, format, topic });
+    
+    if (result.success) {
       return [{
-        title: gptQuestion.title,
+        ...result.question,
         difficulty,
         topic,
         format,
-        description: gptQuestion.description,
-        hints: gptQuestion.hints,
-        sampleInput: gptQuestion.sampleInput,
-        sampleOutput: gptQuestion.sampleOutput,
-        constraints: gptQuestion.constraints || [],
-        expectedApproach: gptQuestion.description,
-        evaluationCriteria: gptQuestion.evaluationCriteria,
-        timeLimit: gptQuestion.timeLimit,
         aiGenerated: true,
-        aiProvider: 'openai-gpt4',
+        aiProvider: 'openrouter',
         generatedAt: new Date()
       }];
-    } catch (error) {
-      console.warn('OpenAI generation failed, using fallback:', error.message);
+    } else {
+      console.warn('OpenRouter generation failed, using fallback');
       // Fall through to template-based generation
     }
+  } catch (error) {
+    console.warn('OpenRouter generation error, using fallback:', error.message);
+    // Fall through to template-based generation
   }
   
   // Fallback: Template-based generation
@@ -523,42 +512,47 @@ function getTimeLimit(format, difficulty) {
 async function generateInterviewFeedback(interviewData) {
   const { userId, interviewId, codeSolution, transcript, question, format } = interviewData;
   
-  // Try OpenAI first if available
-  if (isOpenAIEnabled() && (codeSolution || transcript)) {
+  // Use OpenRouter for feedback generation
+  if (codeSolution || transcript) {
     try {
-      console.log('🤖 Generating feedback using OpenAI GPT-4...');
-      const gptFeedback = await generateInterviewFeedbackGPT({
+      console.log('🤖 Generating feedback using OpenRouter...');
+      const result = await openrouterService.generateInterviewFeedback({
         questionDescription: question?.description || 'Interview question',
         userSolution: codeSolution,
         transcript: transcript,
         format: format || 'coding'
       });
       
-      return {
-        overallScore: gptFeedback.overallScore,
-        rubricScores: {
-          technical: gptFeedback.codeAnalysis?.correctness || 0,
-          communication: gptFeedback.communicationAnalysis?.clarity || 0,
-          codeQuality: gptFeedback.codeAnalysis?.codeQuality || 0,
-          complexity: ((gptFeedback.codeAnalysis?.timeComplexity === 'O(n)' ? 90 : 70) + 
-                       (gptFeedback.codeAnalysis?.spaceComplexity === 'O(1)' ? 90 : 70)) / 2
-        },
-        strengths: gptFeedback.strengths,
-        weaknesses: gptFeedback.weaknesses,
-        detailedFeedback: {
-          code: gptFeedback.codeAnalysis,
-          communication: gptFeedback.communicationAnalysis
-        },
-        improvementPlan: gptFeedback.improvements,
-        nextSteps: gptFeedback.nextSteps,
-        explainableAI: {
-          provider: 'openai-gpt4',
-          confidence: 0.95,
-          reasoning: 'Analysis powered by GPT-4 with interview expertise'
-        }
-      };
+      if (result.success) {
+        return {
+          overallScore: result.feedback.overallScore,
+          rubricScores: {
+            technical: result.feedback.codeAnalysis?.correctness || 0,
+            communication: result.feedback.communicationAnalysis?.clarity || 0,
+            codeQuality: result.feedback.codeAnalysis?.codeQuality || 0,
+            complexity: ((result.feedback.codeAnalysis?.timeComplexity === 'O(n)' ? 90 : 70) + 
+                         (result.feedback.codeAnalysis?.spaceComplexity === 'O(1)' ? 90 : 70)) / 2
+          },
+          strengths: result.feedback.strengths,
+          weaknesses: result.feedback.weaknesses,
+          detailedFeedback: {
+            code: result.feedback.codeAnalysis,
+            communication: result.feedback.communicationAnalysis
+          },
+          improvementPlan: result.feedback.improvements,
+          nextSteps: result.feedback.nextSteps,
+          explainableAI: {
+            provider: 'openrouter',
+            confidence: 0.95,
+            reasoning: 'Analysis powered by OpenRouter LLM'
+          }
+        };
+      } else {
+        console.warn('OpenRouter feedback generation failed, using fallback');
+        // Fall through to template-based analysis
+      }
     } catch (error) {
-      console.warn('OpenAI feedback generation failed, using fallback:', error.message);
+      console.warn('OpenRouter feedback generation error, using fallback:', error.message);
       // Fall through to template-based analysis
     }
   }

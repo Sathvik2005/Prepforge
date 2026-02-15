@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, ArrowRight, Zap } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Zap, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '../store/authStore';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -13,26 +13,33 @@ const Login = () => {
     password: '',
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!formData.email || !formData.password) {
+      setError('Please fill in all fields');
       toast.error('Please fill in all fields');
       return;
     }
 
     setLoading(true);
+    setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      console.log('🔐 Attempting login...');
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      
+      const response = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -44,17 +51,35 @@ const Login = () => {
       });
 
       const data = await response.json();
+      console.log('Response:', data);
 
       if (!response.ok) {
         throw new Error(data.message || 'Login failed');
       }
 
+      console.log('✅ Login successful, storing credentials...');
+      
       // Store user and token in authStore
-      login(data.user, data.token);
+      const userData = {
+        uid: data.user.id,
+        email: data.user.email,
+        displayName: data.user.name,
+        emailVerified: true
+      };
+      
+      login(userData, data.token);
+      
       toast.success('Login successful! Welcome back 🎉');
-      navigate('/dashboard');
+      
+      // Redirect to dashboard
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 500);
+      
     } catch (error) {
-      toast.error(error.message || 'Invalid credentials. Please try again.');
+      console.error('❌ Login error:', error);
+      setError(error.message || 'Invalid credentials. Please try again.');
+      toast.error(error.message || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -138,6 +163,13 @@ const Login = () => {
               </Link>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <motion.button
               type="submit"
@@ -147,7 +179,10 @@ const Login = () => {
               className="w-full py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white font-semibold transition-all duration-300 shadow-soft-md flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <div className="spinner"></div>
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Signing in...</span>
+                </>
               ) : (
                 <>
                   <span>Sign In</span>

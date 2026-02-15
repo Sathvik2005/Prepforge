@@ -103,11 +103,24 @@ export const onAuthChange = (callback) => {
 };
 
 /**
- * Get current user's ID token
+ * Get current user's ID token (force refresh)
  */
-export const getCurrentUserToken = async () => {
+export const getCurrentUserToken = async (forceRefresh = true) => {
   if (!auth || !auth.currentUser) return null;
-  return await auth.currentUser.getIdToken();
+  try {
+    return await auth.currentUser.getIdToken(forceRefresh);
+  } catch (error) {
+    console.error('Error getting Firebase token:', error);
+    return null;
+  }
+};
+
+/**
+ * Get current Firebase user
+ */
+export const getCurrentUser = () => {
+  if (!auth) return null;
+  return auth.currentUser;
 };
 
 export { auth, googleProvider };
@@ -120,5 +133,6 @@ export default {
   logout,
   resetPassword,
   onAuthChange,
-  getCurrentUserToken
+  getCurrentUserToken,
+  getCurrentUser
 };

@@ -211,7 +211,7 @@ const ResumeEditor = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className="min-h-screen bg-gray-900 text-white pt-20">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-gray-800 border-b border-gray-700 px-6 py-4">
         <div className="flex items-center justify-between">

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { useThemeStore } from '@/store/themeStore';
+import { useThemeStore } from '../../store/themeStore';
 
 /**
  * CinematicBackground - Animated background with floating orbs and subtle gradients

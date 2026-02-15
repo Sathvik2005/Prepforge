@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { showError } from '../utils/toast';
 
 /**
  * Anti-Cheat Hook for Mock Interviews
@@ -35,20 +36,11 @@ export const useAntiCheat = ({ onViolation, enableExtensionDetection = true }) =
           const newCount = prev + 1;
           
           if (newCount === 1) {
-            toast.error('⚠️ Warning: Tab switching detected!', {
-              duration: 4000,
-              icon: '🚨',
-            });
+            showError('⚠️ Warning: Tab switching detected! 🚨');
           } else if (newCount === 2) {
-            toast.error('⚠️ Second warning: Please stay focused on the interview!', {
-              duration: 5000,
-              icon: '🚨',
-            });
+            showError('⚠️ Second warning: Please stay focused on the interview! 🚨');
           } else if (newCount >= 3) {
-            toast.error('🚫 Multiple tab switches detected! Interview may be invalidated.', {
-              duration: 6000,
-              icon: '⛔',
-            });
+            showError('🚫 Multiple tab switches detected! Interview may be invalidated. ⛔');
             setSuspiciousActivity(true);
           }
 

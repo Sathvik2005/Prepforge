@@ -13,11 +13,7 @@ import ConversationalInterview from '../models/ConversationalInterview.js';
 import ParsedResume from '../models/ParsedResume.js';
 import JobDescription from '../models/JobDescription.js';
 import QuestionBank from '../models/QuestionBank.js';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import * as openrouterService from './openrouterService.js';
 
 class DynamicInterviewEngine {
   
@@ -291,24 +287,21 @@ class DynamicInterviewEngine {
     try {
       const prompt = this.buildQuestionPrompt(questionFocus, context, resume, jd);
       
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an expert interviewer. Generate realistic, professional interview questions tailored to the candidate and role. Return ONLY a JSON object with: question, expectedKeyPoints (array), difficulty (easy/medium/hard), type (technical/behavioral/situational).'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
+      const response = await openrouterService.createChatCompletion([
+        {
+          role: 'system',
+          content: 'You are an expert interviewer. Generate realistic, professional interview questions tailored to the candidate and role. Return ONLY a JSON object with: question, expectedKeyPoints (array), difficulty (easy/medium/hard), type (technical/behavioral/situational).'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ], {
         temperature: 0.8,
-        max_tokens: 300,
-        response_format: { type: "json_object" }
+        max_tokens: 300
       });
       
-      const generated = JSON.parse(response.choices[0].message.content);
+      const generated = JSON.parse(response.content);
       
       // Store in question bank for reuse
       const questionDoc = await QuestionBank.create({
@@ -530,17 +523,15 @@ The candidate answered but missed these key points: ${missingPoints.join(', ')}
 
 Generate a brief follow-up question (one sentence) to probe deeper on these missing points. Be conversational.`;
 
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          { role: 'system', content: 'You are an interviewer asking follow-up questions. Be brief and conversational.' },
-          { role: 'user', content: prompt }
-        ],
+      const response = await openrouterService.createChatCompletion([
+        { role: 'system', content: 'You are an interviewer asking follow-up questions. Be brief and conversational.' },
+        { role: 'user', content: prompt }
+      ], {
         temperature: 0.7,
         max_tokens: 100
       });
       
-      const followUpText = response.choices[0].message.content.trim();
+      const followUpText = response.content.trim();
       
       return {
         text: followUpText,

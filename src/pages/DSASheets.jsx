@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { 
@@ -20,15 +21,29 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import toast from 'react-hot-toast';
+import { showError } from '../utils/toast';
+import { progressAPI, sheetsAPI } from '../services/api';
+import { useTracking } from '../contexts/TrackingContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const DSASheets = () => {
   const { currentUser } = useAuth();
+  const { trackPageView, track } = useTracking();
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
+  const [sheets, setSheets] = useState([]);
+  const [sheetsLoading, setSheetsLoading] = useState(true);
   const containerRef = useRef(null);
+
+  // Track page view
+  useEffect(() => {
+    trackPageView('/dsa-sheets');
+  }, [trackPageView]);
+
+  useEffect(() => {
+    loadSheets();
+  }, []);
 
   useEffect(() => {
     if (currentUser) {
@@ -83,85 +98,116 @@ const DSASheets = () => {
     });
   }, [loading]);
 
+  const loadSheets = async () => {
+    try {
+      const response = await sheetsAPI.getAll();
+      const apiSheets = response.data?.data || response.data || [];
+      
+      // If API returns sheets, map them
+      if (apiSheets.length > 0) {
+        const mappedSheets = apiSheets.map((sheet) => {
+          // Determine icon based on sheet type or slug
+          let icon = BookOpen;
+          let color = 'bg-royal-600';
+          
+          if (sheet.slug === 'blind-75') {
+            icon = Trophy;
+            color = 'bg-navy-700';
+          } else if (sheet.slug === 'sde-sheet') {
+            icon = Code;
+            color = 'bg-royal-700';
+          } else if (sheet.slug === 'a2z-dsa') {
+            icon = BookOpen;
+            color = 'bg-royal-600';
+          }
+          
+          return {
+            id: sheet.slug,
+            title: sheet.title,
+            description: sheet.description,
+            icon,
+            color,
+            problems: sheet.totalProblems,
+            hasTrack: true
+          };
+        });
+        
+        setSheets(mappedSheets);
+        setSheetsLoading(false);
+        return;
+      }
+      
+      // If API returns empty, fall through to fallback
+    } catch (error) {
+      console.error('Failed to load sheets from API:', error);
+    }
+    
+    // Always set fallback sheets (either API failed or returned empty)
+    console.log('Using fallback sheets');
+    setSheets([
+      {
+        id: 'a2z-dsa',
+        title: 'A2Z DSA Sheet - Complete DSA Roadmap',
+        description: 'Complete Data Structures and Algorithms roadmap from basics to advanced',
+        icon: BookOpen,
+        color: 'bg-royal-600',
+        problems: 78,
+        hasTrack: true
+      },
+      {
+        id: 'blind-75',
+        title: 'Blind 75 - Must-Do Coding Interview Problems',
+        description: 'Curated list of 75 essential coding interview problems',
+        icon: Trophy,
+        color: 'bg-navy-700',
+        problems: 75,
+        hasTrack: true
+      },
+      {
+        id: 'sde-sheet',
+        title: "Striver's SDE Sheet - Top Coding Interview Problems",
+        description: 'Most frequently asked interview questions for SDE roles',
+        icon: Code,
+        color: 'bg-royal-700',
+        problems: 140,
+        hasTrack: true
+      }
+    ]);
+    setSheetsLoading(false);
+  };
+
   const loadUserProgress = async () => {
     try {
-      const response = await fetch(`/api/progress/${currentUser.uid}`);
-      if (response.ok) {
-        const data = await response.json();
-        setProgress(data);
-      }
+      const response = await progressAPI.getAll();
+      setProgress(response.data || {});
     } catch (error) {
       console.error('Failed to load progress:', error);
+      // Don't show error toast, just silently fail for better UX
+      setProgress({});
     } finally {
       setLoading(false);
     }
   };
 
+  const navigate = useNavigate();
   const handleSheetClick = (sheetId) => {
-    if (!currentUser) {
-      toast.error('Please sign in to access sheets');
-      return;
-    }
-    // Navigate to sheet detail page
-    window.location.href = `/sheet/${sheetId}`;
+    // Allow viewing sheets without authentication
+    navigate(`/dsa-sheets/${sheetId}`);
   };
 
   const handleTrackClick = (sheetId) => {
-    if (!currentUser) {
-      toast.error('Please sign in to track progress');
-      return;
-    }
-    // Navigate to tracking page
-    window.location.href = `/track/${sheetId}`;
+    // Allow viewing tracking without authentication
+    navigate(`/dsa-sheets/${sheetId}/track`);
   };
 
   const handleStartLearning = (courseId) => {
     if (!currentUser) {
-      toast.error('Please sign in to start learning');
+      showError('Please sign in to start learning');
       return;
     }
     // Navigate to course page
-    window.location.href = `/course/${courseId}`;
+    navigate(`/practice?course=${courseId}`);
   };
-
-  const dsaSheets = [
-    {
-      id: 'a2z-sheet',
-      title: 'A2Z Sheet',
-      description: 'Master DSA from Basics to Advanced',
-      icon: BookOpen,
-      color: 'bg-royal-600',
-      problems: 450,
-      hasTrack: true
-    },
-    {
-      id: 'blind-75',
-      title: 'Blind 75 Sheet',
-      description: 'Interview Problems with Video Solutions',
-      icon: Trophy,
-      color: 'bg-navy-700',
-      problems: 75,
-      hasTrack: true
-    },
-    {
-      id: 'sde-sheet',
-      title: 'SDE Sheet',
-      description: 'Most Frequently Asked Interview Questions',
-      icon: Code,
-      color: 'bg-royal-700',
-      problems: 191,
-      hasTrack: true
-    },
-    {
-      id: 'striver-79',
-      title: 'Striver 79 Sheet',
-      description: 'Last Minute Preparation',
-      icon: Zap,
-      color: 'bg-navy-800',
-      problems: 79,
-      hasTrack: true
-    }
-  ];
 
   const coreCSSubjects = [
     {
@@ -316,7 +362,7 @@ const DSASheets = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 text-navy-900 dark:text-white">
+    <div className="min-h-screen bg-surface-50 dark:bg-surface-900 text-navy-900 dark:text-white pt-24">
       {/* Hero Section */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -342,43 +388,55 @@ const DSASheets = () => {
             <BookOpen className="w-8 h-8 text-royal-600 mr-3" />
             <h2 className="text-4xl font-bold text-navy-900 dark:text-white">DSA Sheets</h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {dsaSheets.map((sheet, index) => (
-              <motion.div
-                key={sheet.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
-                className="bg-white dark:bg-surface-800 rounded-xl p-6 border border-surface-200 dark:border-surface-700 hover:border-royal-300 dark:hover:border-royal-600 transition-all group shadow-soft"
-              >
-                <div className={`w-16 h-16 rounded-lg ${sheet.color} flex items-center justify-center mb-4 shadow-soft-md`}>
-                  <sheet.icon className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-2 text-navy-900 dark:text-white">{sheet.title}</h3>
-                <p className="text-surface-600 dark:text-surface-400 mb-4">{sheet.description}</p>
-                <div className="flex items-center text-sm text-surface-500 mb-6">
-                  <Code className="w-4 h-4 mr-1" />
-                  <span>{sheet.problems} Problems</span>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleSheetClick(sheet.id)}
-                    className={`flex-1 ${sheet.color} text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-soft-md`}
-                  >
-                    <FileText className="w-4 h-4" />
-                    Sheet
-                  </button>
-                  <button
-                    onClick={() => handleTrackClick(sheet.id)}
-                    className="flex-1 bg-surface-100 dark:bg-surface-700 text-navy-900 dark:text-white px-4 py-2 rounded-lg font-semibold hover:bg-surface-200 dark:hover:bg-surface-600 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <CheckCircle className="w-4 h-4" />
-                    Track
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
+          {sheetsLoading ? (
+            <div className="text-center py-12">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-royal-600"></div>
+              <p className="mt-4 text-surface-600 dark:text-surface-400">Loading sheets...</p>
+            </div>
+          ) : sheets.length === 0 ? (
+            <div className="text-center py-12">
+              <BookOpen className="w-16 h-16 text-surface-400 mx-auto mb-4" />
+              <p className="text-surface-600 dark:text-surface-400">No sheets available yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {sheets.map((sheet, index) => (
+                <motion.div
+                  key={sheet.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="bg-white dark:bg-surface-800 rounded-xl p-6 border border-surface-200 dark:border-surface-700 hover:border-royal-300 dark:hover:border-royal-600 transition-all group shadow-soft"
+                >
+                  <div className={`w-16 h-16 rounded-lg ${sheet.color} flex items-center justify-center mb-4 shadow-soft-md`}>
+                    <sheet.icon className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2 text-navy-900 dark:text-white">{sheet.title}</h3>
+                  <p className="text-surface-600 dark:text-surface-400 mb-4">{sheet.description}</p>
+                  <div className="flex items-center text-sm text-surface-500 mb-6">
+                    <Code className="w-4 h-4 mr-1" />
+                    <span>{sheet.problems} Problems</span>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleSheetClick(sheet.id)}
+                      className={`flex-1 ${sheet.color} text-white px-4 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity flex items-center justify-center gap-2 shadow-soft-md`}
+                    >
+                      <FileText className="w-4 h-4" />
+                      Sheet
+                    </button>
+                    <button
+                      onClick={() => handleTrackClick(sheet.id)}
+                      className="flex-1 bg-surface-100 dark:bg-surface-700 text-navy-900 dark:text-white px-4 py-2 rounded-lg font-semibold hover:bg-surface-200 dark:hover:bg-surface-600 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Track
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* Core CS Subjects Section */}
@@ -534,7 +592,7 @@ const DSASheets = () => {
           </p>
           {!currentUser && (
             <button
-              onClick={() => window.location.href = '/signup'}
+              onClick={() => navigate('/register')}
               className="bg-white text-royal-700 px-8 py-4 rounded-lg font-bold text-lg hover:bg-surface-50 transition-colors inline-flex items-center gap-2 shadow-soft-md"
             >
               Get Started Free

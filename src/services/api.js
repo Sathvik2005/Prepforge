@@ -1,18 +1,47 @@
 import axios from 'axios';
-import { API_BASE_URL } from '@/utils/constants';
+import { API_BASE_URL } from '../utils/constants';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
 // Add token to requests
-api.interceptors.request.use((config) => {
-  const token = JSON.parse(localStorage.getItem('auth-storage'))?.state?.token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (config) => {
+    try {
+      const authStorage = localStorage.getItem('auth-storage');
+      if (authStorage) {
+        const parsed = JSON.parse(authStorage);
+        const token = parsed?.state?.token;
+        
+        if (token && typeof token === 'string' && token.length > 0) {
+          // Ensure token doesn't have extra whitespace
+          config.headers.Authorization = `Bearer ${token.trim()}`;
+        }
+      }
+    } catch (error) {
+      console.error('Error reading auth token:', error);
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Handle response errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid - clear auth and redirect to login
+      console.warn('Authentication failed, clearing session');
+      localStorage.removeItem('auth-storage');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Auth APIs
 export const authAPI = {
@@ -41,6 +70,16 @@ export const progressAPI = {
   submit: (data) => api.post('/progress/submit', data),
   getAll: () => api.get('/progress'),
   getAnalytics: () => api.get('/progress/analytics'),
+};
+
+// Sheets APIs
+export const sheetsAPI = {
+  getAll: (filters) => api.get('/sheets', { params: filters }),
+  getBySlug: (slug) => api.get(`/sheets/${slug}`),
+  toggleProgress: (slug, problemSlug) => api.post(`/sheets/${slug}/progress/toggle`, { problemSlug }),
+  toggleRevision: (slug, problemSlug) => api.post(`/sheets/${slug}/revision/toggle`, { problemSlug }),
+  saveNotes: (slug, problemSlug, notes) => api.post(`/sheets/${slug}/notes/save`, { problemSlug, notes }),
+  getRandom: (slug) => api.get(`/sheets/${slug}/random`),
 };
 
 // AI Features APIs (Complete Integration)

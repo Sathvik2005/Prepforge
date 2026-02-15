@@ -1,6 +1,6 @@
 import ConversationalInterview from '../models/ConversationalInterview.js';
 import ParsedResume from '../models/ParsedResume.js';
-import OpenAI from 'openai';
+import * as openrouterService from './openrouterService.js';
 
 /**
  * Interview Engine Service
@@ -13,10 +13,6 @@ import OpenAI from 'openai';
  * 4. Follow-up generation for weak answers (rule-based trigger)
  * 5. GPT-4 ONLY for question phrasing, NOT evaluation
  */
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 class InterviewEngineService {
   constructor() {
@@ -127,14 +123,15 @@ ${resume ? `Candidate's background:
 
 Rephrase this question naturally for a ${targetRole} position. Keep it conversational and appropriate for the role. Return ONLY the question, no explanations.`;
 
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 150,
-      });
+      const response = await openrouterService.createChatCompletion(
+        [{ role: 'user', content: prompt }],
+        {
+          temperature: 0.7,
+          max_tokens: 150,
+        }
+      );
       
-      const personalizedText = response.choices[0].message.content.trim();
+      const personalizedText = response.content.trim();
       
       return {
         text: personalizedText,
@@ -189,14 +186,15 @@ Generate a ${followUpType} follow-up question to probe deeper. Examples:
 
 Return ONLY the follow-up question, no explanations.`;
 
-      const response = await openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 100,
-      });
+      const response = await openrouterService.createChatCompletion(
+        [{ role: 'user', content: prompt }],
+        {
+          temperature: 0.7,
+          max_tokens: 100,
+        }
+      );
       
-      const followUpText = response.choices[0].message.content.trim();
+      const followUpText = response.content.trim();
       
       return {
         text: followUpText,

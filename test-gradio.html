@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Gradio API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+        }
+        #results {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>Gradio API Test - Resume Genome</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: Upload & Process Resume</h2>
+        <input type="file" id="fileInput" accept=".pdf,.docx">
+        <button onclick="testProcessResume()">Test Process Resume</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Analyze Resume</h2>
+        <textarea id="resumeText" placeholder="Paste resume text here..." rows="5" style="width: 100%;"></textarea>
+        <textarea id="jobDesc" placeholder="Paste job description here..." rows="3" style="width: 100%;"></textarea>
+        <button onclick="testAnalyze()">Test Analyze</button>
+    </div>
+
+    <div id="results">
+        <p>Results will appear here...</p>
+    </div>
+
+    <script type="module">
+        import { Client } from 'https://cdn.jsdelivr.net/npm/@gradio/client@1.19.1/+esm';
+
+        let client = null;
+        
+        async function getClient() {
+            if (client) return client;
+            
+            log('🔌 Connecting to Resume-Genome...', 'info');
+            try {
+                client = await Client.connect('thisrudrapatel/Resume-Genome');
+                log('✅ Connected successfully!', 'success');
+                return client;
+            } catch (error) {
+                log('❌ Connection failed: ' + error.message, 'error');
+                throw error;
+            }
+        }
+
+        window.testProcessResume = async function() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                log('❌ Please select a file first', 'error');
+                return;
+            }
+
+            log('📄 File selected: ' + file.name + ' (' + file.type + ', ' + file.size + ' bytes)', 'info');
+            
+            try {
+                const client = await getClient();
+                log('🚀 Calling /process_resume API...', 'info');
+                
+                const result = await client.predict("/process_resume", { 
+                    file: file
+                });
+                
+                log('✅ Success! Result:', 'success');
+                log(JSON.stringify(result, null, 2), 'info');
+                
+                if (result.data) {
+                    log('\n📝 Extracted text:\n' + result.data, 'success');
+                    document.getElementById('resumeText').value = result.data;
+                }
+            } catch (error) {
+                log('❌ Error: ' + error.message, 'error');
+                log('Stack: ' + error.stack, 'error');
+            }
+        };
+
+        window.testAnalyze = async function() {
+            const resumeText = document.getElementById('resumeText').value;
+            const jobDesc = document.getElementById('jobDesc').value;
+            
+            if (!resumeText) {
+                log('❌ Please provide resume text', 'error');
+                return;
+            }
+
+            try {
+                const client = await getClient();
+                log('🔍 Calling /analyze_resume API...', 'info');
+                
+                const result = await client.predict("/analyze_resume", { 
+                    resume_text: resumeText,
+                    job_description: jobDesc || '',
+                    with_job_description: !!jobDesc,
+                    temperature: 0.5,
+                    max_tokens: 1024
+                });
+                
+                log('✅ Success! Result:', 'success');
+                log(JSON.stringify(result, null, 2), 'info');
+            } catch (error) {
+                log('❌ Error: ' + error.message, 'error');
+                log('Stack: ' + error.stack, 'error');
+            }
+        };
+
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const time = new Date().toLocaleTimeString();
+            const line = `[${time}] ${message}\n`;
+            
+            const span = document.createElement('span');
+            span.className = type;
+            span.textContent = line;
+            
+            if (results.querySelector('p')) {
+                results.innerHTML = '';
+            }
+            
+            results.appendChild(span);
+            results.scrollTop = results.scrollHeight;
+        }
+
+        // Make log function available globally
+        window.log = log;
+    </script>
+</body>
+</html>

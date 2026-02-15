@@ -20,8 +20,10 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAntiCheat } from '../hooks/useAntiCheat';
+import { useTracking } from '../contexts/TrackingContext';
 
 const MockInterview = () => {
+  const { trackPageView, trackMockInterview } = useTracking();
   const [selectedRound, setSelectedRound] = useState(null);
   const [isActive, setIsActive] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -29,6 +31,11 @@ const MockInterview = () => {
   const [answers, setAnswers] = useState([]);
   const [showResults, setShowResults] = useState(false);
   const [showViolationPanel, setShowViolationPanel] = useState(false);
+
+  // Track page view
+  useEffect(() => {
+    trackPageView('/mock-interview');
+  }, [trackPageView]);
 
   // Anti-cheat monitoring
   const antiCheat = useAntiCheat({
@@ -140,6 +147,16 @@ const MockInterview = () => {
     antiCheat.stopMonitoring();
     
     generateFeedback();
+    
+    // Track interview completion
+    const score = Math.floor(Math.random() * 30) + 70;
+    trackMockInterview({
+      type: selectedRound?.type,
+      score,
+      duration: timer,
+      questionsAttempted: currentQuestion + 1,
+      violations: antiCheat.violations?.length || 0
+    });
   };
 
   const generateFeedback = () => {

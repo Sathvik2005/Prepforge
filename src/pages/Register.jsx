@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, ArrowRight, Zap } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, Zap, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '../store/authStore';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -15,31 +15,45 @@ const Register = () => {
     confirmPassword: '',
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
     });
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!formData.name || !formData.email || !formData.password || !formData.confirmPassword) {
+      setError('Please fill in all fields');
+      toast.error('Please fill in all fields');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match');
       toast.error('Passwords do not match');
       return;
     }
 
     if (formData.password.length < 6) {
+      setError('Password must be at least 6 characters');
       toast.error('Password must be at least 6 characters');
       return;
     }
 
     setLoading(true);
+    setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      console.log('📝 Attempting registration...');
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      
+      const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,11 +71,28 @@ const Register = () => {
         throw new Error(data.message || 'Registration failed');
       }
 
+      console.log('✅ Registration successful, storing credentials...');
+      
       // Store user and token in authStore
-      login(data.user, data.token);
+      const userData = {
+        uid: data.user.id,
+        email: data.user.email,
+        displayName: data.user.name,
+        emailVerified: true
+      };
+      
+      login(userData, data.token);
+      
       toast.success('Account created successfully! 🎉');
-      navigate('/dashboard');
+      
+      // Redirect to dashboard
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 500);
+      
     } catch (error) {
+      console.error('❌ Registration error:', error);
+      setError(error.message || 'Registration failed. Please try again.');
       toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
@@ -172,6 +203,13 @@ const Register = () => {
               </div>
             </div>
 
+            {/* Error Message */}
+            {error && (
+              <div className="p-4 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
+                <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <motion.button
               type="submit"
@@ -181,7 +219,10 @@ const Register = () => {
               className="w-full py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white font-semibold transition-all duration-300 shadow-soft-md flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
-                <div className="spinner"></div>
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>Creating account...</span>
+                </>
               ) : (
                 <>
                   <span>Create Account</span>

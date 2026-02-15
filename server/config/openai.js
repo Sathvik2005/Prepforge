@@ -25,12 +25,20 @@ export const initializeOpenAI = () => {
       return null;
     }
 
+    // Validate API key format
+    const apiKey = process.env.OPENAI_API_KEY.trim();
+    if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
+      console.error('❌ Invalid OpenAI API key format. Key should start with "sk-" and be at least 20 characters.');
+      console.warn('⚠️  AI features will use mock responses');
+      return null;
+    }
+
     openaiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
+      apiKey: apiKey
     });
 
     console.log('✅ OpenAI API initialized successfully');
-    console.log('   API Key:', process.env.OPENAI_API_KEY.substring(0, 20) + '...');
+    console.log('   API Key:', apiKey.substring(0, 20) + '...');
     return openaiClient;
 
   } catch (error) {

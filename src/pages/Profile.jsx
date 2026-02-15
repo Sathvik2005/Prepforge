@@ -13,7 +13,7 @@ import {
   Brain,
   TrendingUp,
 } from 'lucide-react';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore } from '../store/authStore';
 import toast from 'react-hot-toast';
 
 const Profile = () => {

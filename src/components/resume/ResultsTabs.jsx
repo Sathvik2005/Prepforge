@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FileText, Target, Edit3, Mail, MessageSquare, Download, Loader2, AlertCircle, Copy, Check, Sparkles } from 'lucide-react';
+import { FileText, Target, Edit3, Mail, MessageSquare, Download, Loader2, AlertCircle, Copy, Check, Sparkles, TrendingUp } from 'lucide-react';
 import { showSuccess, showError } from '../../utils/toast';
 import apiClient from '../../config/axios';
 
@@ -12,6 +12,7 @@ import apiClient from '../../config/axios';
 const TABS = [
   { id: 'parsed', label: 'Parsed', icon: FileText, color: 'from-blue-500 to-cyan-500' },
   { id: 'analysis', label: 'Analysis', icon: Target, color: 'from-purple-500 to-pink-500' },
+  { id: 'skillGap', label: 'Skill Gap', icon: TrendingUp, color: 'from-yellow-500 to-orange-500' },
   { id: 'rephrased', label: 'Rephrase', icon: Edit3, color: 'from-green-500 to-emerald-500' },
   { id: 'cover', label: 'Cover Letter', icon: Mail, color: 'from-orange-500 to-red-500' },
   { id: 'interview', label: 'Interview Q&A', icon: MessageSquare, color: 'from-indigo-500 to-purple-500' },
@@ -339,6 +340,222 @@ const getCategoryIcon = (category) => {
   return '❓';
 };
 
+/**
+ * Format skill gap analysis with comprehensive sections
+ */
+const formatSkillGapAnalysis = (skillGap) => {
+  if (!skillGap) return null;
+
+  return (
+    <div className="space-y-6">
+      {/* Overall Assessment */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-yellow-500/10 to-orange-500/10 p-6 rounded-xl border border-yellow-500/30 backdrop-blur-sm"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-xl font-bold text-yellow-300 flex items-center gap-2">
+            <span className="text-2xl">🎯</span>
+            Overall Match Score
+          </h4>
+          <div className="text-4xl font-bold text-yellow-400">
+            {skillGap.matchScore}%
+          </div>
+        </div>
+        <p className="text-gray-200 leading-relaxed">{skillGap.overallAssessment}</p>
+      </motion.div>
+
+      {/* Matched Skills */}
+      {skillGap.matchedSkills && skillGap.matchedSkills.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 p-6 rounded-xl border border-green-500/30 backdrop-blur-sm"
+        >
+          <h4 className="text-lg font-bold text-green-300 mb-4 flex items-center gap-2">
+            <span className="text-2xl">✅</span>
+            Matched Skills ({skillGap.matchedSkills.length})
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {skillGap.matchedSkills.map((skill, idx) => (
+              <div key={idx} className="bg-white/5 p-3 rounded-lg border border-green-500/20">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-green-200">{skill.skill}</span>
+                  <span className="text-xs px-2 py-1 bg-green-500/20 rounded-full text-green-300">
+                    {skill.proficiencyLevel}
+                  </span>
+                </div>
+                <div className="text-xs text-gray-400 mb-1">{skill.category}</div>
+                {skill.evidenceFromResume && (
+                  <div className="text-xs text-gray-300 italic mt-2 pl-2 border-l-2 border-green-500/30">
+                    {skill.evidenceFromResume}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Missing Skills */}
+      {skillGap.missingSkills && skillGap.missingSkills.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-gradient-to-br from-red-500/10 to-pink-500/10 p-6 rounded-xl border border-red-500/30 backdrop-blur-sm"
+        >
+          <h4 className="text-lg font-bold text-red-300 mb-4 flex items-center gap-2">
+            <span className="text-2xl">❌</span>
+            Missing Skills ({skillGap.missingSkills.length})
+          </h4>
+          <div className="space-y-3">
+            {skillGap.missingSkills.map((skill, idx) => (
+              <div key={idx} className="bg-white/5 p-4 rounded-lg border border-red-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-red-200">{skill.skill}</span>
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    skill.priority === 'Critical' ? 'bg-red-600 text-white' :
+                    skill.priority === 'High' ? 'bg-orange-500/30 text-orange-200' :
+                    skill.priority === 'Medium' ? 'bg-yellow-500/30 text-yellow-200' :
+                    'bg-gray-500/30 text-gray-200'
+                  }`}>
+                    {skill.priority}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-300 mb-1">
+                  Required Level: <span className="text-gray-200 font-medium">{skill.requiredLevel}</span>
+                </div>
+                <div className="text-sm text-gray-400 italic">{skill.reason}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Partial Coverage */}
+      {skillGap.partialCoverage && skillGap.partialCoverage.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-gradient-to-br from-orange-500/10 to-yellow-500/10 p-6 rounded-xl border border-orange-500/30 backdrop-blur-sm"
+        >
+          <h4 className="text-lg font-bold text-orange-300 mb-4 flex items-center gap-2">
+            <span className="text-2xl">⚠️</span>
+            Partial Coverage ({skillGap.partialCoverage.length})
+          </h4>
+          <div className="space-y-3">
+            {skillGap.partialCoverage.map((skill, idx) => (
+              <div key={idx} className="bg-white/5 p-4 rounded-lg border border-orange-500/20">
+                <div className="font-semibold text-orange-200 mb-2">{skill.skill}</div>
+                <div className="text-sm text-gray-300 mb-2">
+                  Current: <span className="text-gray-200">{skill.currentLevel}</span> → 
+                  Required: <span className="text-orange-200 font-medium">{skill.requiredLevel}</span>
+                </div>
+                <div className="text-sm text-gray-400 mb-2">{skill.gap}</div>
+                <div className="text-sm text-green-300 bg-green-500/10 p-2 rounded border border-green-500/20">
+                  💡 {skill.improvementAction}
+                </div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Recommended Upskilling */}
+      {skillGap.recommendedUpskilling && skillGap.recommendedUpskilling.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 p-6 rounded-xl border border-blue-500/30 backdrop-blur-sm"
+        >
+          <h4 className="text-lg font-bold text-blue-300 mb-4 flex items-center gap-2">
+            <span className="text-2xl">📚</span>
+            Recommended Learning Path
+          </h4>
+          <div className="space-y-4">
+            {skillGap.recommendedUpskilling.map((item, idx) => (
+              <div key={idx} className="bg-white/5 p-4 rounded-lg border border-blue-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-semibold text-blue-200">{item.area}</span>
+                  <span className="text-xs px-2 py-1 bg-blue-500/20 rounded-full text-blue-300">
+                    {item.priority}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-300 mb-2">{item.reason}</div>
+                <div className="text-xs text-gray-400 mb-2">⏱️ {item.estimatedTime}</div>
+                {item.suggestedResources && item.suggestedResources.length > 0 && (
+                  <div className="mt-2">
+                    <div className="text-xs text-blue-300 mb-1">Resources:</div>
+                    <ul className="list-disc list-inside text-xs text-gray-300 space-y-1">
+                      {item.suggestedResources.map((resource, rIdx) => (
+                        <li key={rIdx}>{resource}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Readiness Assessment */}
+      {skillGap.readinessAssessment && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 p-6 rounded-xl border border-purple-500/30 backdrop-blur-sm"
+        >
+          <h4 className="text-lg font-bold text-purple-300 mb-4 flex items-center gap-2">
+            <span className="text-2xl">🎓</span>
+            Readiness Assessment
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-white/5 p-3 rounded-lg">
+              <div className="text-sm text-gray-400 mb-1">Current Readiness</div>
+              <div className="text-2xl font-bold text-purple-300">
+                {skillGap.readinessAssessment.currentReadiness}
+              </div>
+            </div>
+            <div className="bg-white/5 p-3 rounded-lg">
+              <div className="text-sm text-gray-400 mb-1">Time to Job-Ready</div>
+              <div className="text-2xl font-bold text-purple-300">
+                {skillGap.readinessAssessment.timeToReadiness}
+              </div>
+            </div>
+          </div>
+          {skillGap.readinessAssessment.quickWins && skillGap.readinessAssessment.quickWins.length > 0 && (
+            <div className="mb-4">
+              <div className="text-sm font-semibold text-green-300 mb-2">⚡ Quick Wins:</div>
+              <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
+                {skillGap.readinessAssessment.quickWins.map((win, idx) => (
+                  <li key={idx}>{win}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {skillGap.readinessAssessment.longTermGoals && skillGap.readinessAssessment.longTermGoals.length > 0 && (
+            <div>
+              <div className="text-sm font-semibold text-orange-300 mb-2">🎯 Long-term Goals:</div>
+              <ul className="list-disc list-inside text-sm text-gray-300 space-y-1">
+                {skillGap.readinessAssessment.longTermGoals.map((goal, idx) => (
+                  <li key={idx}>{goal}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
 export default function ResultsTabs({ results, loading = false, error = null }) {
   const [activeTab, setActiveTab] = useState('parsed');
   const [downloading, setDownloading] = useState(false);
@@ -480,6 +697,32 @@ export default function ResultsTabs({ results, loading = false, error = null }) 
               <div className="text-center py-12 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
                 <Target className="w-12 h-12 text-gray-400 mx-auto mb-4 opacity-50" />
                 <p className="text-gray-400">Run analysis to see feedback</p>
+              </div>
+            )}
+          </div>
+        );
+
+      case 'skillGap':
+        const hasSkillGap = results.skillGapAnalysis && results.skillGapAnalysis.matchScore !== undefined;
+        
+        return (
+          <div className="space-y-4">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <TrendingUp className="w-6 h-6 text-yellow-400" />
+              Skill Gap Analysis
+            </h3>
+            <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl mb-4">
+              <p className="text-sm text-yellow-200">
+                <strong>Universal Analysis:</strong> This skill gap analysis works for any role across all industries.
+              </p>
+            </div>
+            {hasSkillGap ? (
+              formatSkillGapAnalysis(results.skillGapAnalysis)
+            ) : (
+              <div className="text-center py-12 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10">
+                <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-4 opacity-50" />
+                <p className="text-gray-400">Add a job description to analyze skill gaps</p>
+                <p className="text-gray-500 text-sm mt-2">Get personalized recommendations for any role or industry</p>
               </div>
             )}
           </div>

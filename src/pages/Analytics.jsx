@@ -1,11 +1,21 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import gsap from 'gsap';
-import { TrendingUp, Target, Clock, Award, Calendar, BookOpen } from 'lucide-react';
+import { TrendingUp, Target, Clock, Award, Calendar, BookOpen, Zap, Activity as ActivityIcon } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import RealTimeMetrics from '../components/analytics/RealTimeMetrics';
+import { useTracking } from '../contexts/TrackingContext';
 
 const Analytics = () => {
   const statsRef = useRef(null);
+  const [showRealTime, setShowRealTime] = useState(true);
+  const { trackPageView, metrics, refreshMetrics } = useTracking();
+
+  // Track page view and refresh metrics
+  useEffect(() => {
+    trackPageView('/analytics');
+    refreshMetrics();
+  }, [trackPageView, refreshMetrics]);
 
   useEffect(() => {
     const stats = document.querySelectorAll('.analytics-stat');
@@ -64,40 +74,72 @@ const Analytics = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-12"
         >
-          <h1 className="text-5xl font-bold mb-4 text-navy-900 dark:text-white">
-            Analytics <span className="text-royal-600">Dashboard</span>
-          </h1>
-          <p className="text-xl text-surface-600 dark:text-surface-400">
-            Deep insights into your preparation journey
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-5xl font-bold mb-4 text-navy-900 dark:text-white">
+                Analytics <span className="text-royal-600">Dashboard</span>
+              </h1>
+              <p className="text-xl text-surface-600 dark:text-surface-400">
+                Deep insights into your preparation journey
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <button
+                onClick={() => setShowRealTime(true)}
+                className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${
+                  showRealTime
+                    ? 'bg-royal-600 text-white shadow-lg shadow-royal-600/50'
+                    : 'glass-strong text-gray-400 hover:text-white'
+                }`}
+              >
+                <Zap className="w-5 h-5" />
+                Real-Time
+              </button>
+              <button
+                onClick={() => setShowRealTime(false)}
+                className={`px-6 py-3 rounded-xl font-medium transition-all duration-300 flex items-center gap-2 ${
+                  !showRealTime
+                    ? 'bg-royal-600 text-white shadow-lg shadow-royal-600/50'
+                    : 'glass-strong text-gray-400 hover:text-white'
+                }`}
+              >
+                <ActivityIcon className="w-5 h-5" />
+                Overview
+              </button>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Key Metrics */}
-        <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {[
-            { icon: Target, label: 'Total Solved', value: 248, color: 'bg-royal-600' },
-            { icon: TrendingUp, label: 'Accuracy', value: 85, suffix: '%', color: 'bg-success-600' },
-            { icon: Clock, label: 'Study Hours', value: 127, suffix: 'h', color: 'bg-navy-700' },
-            { icon: Award, label: 'Streak Days', value: 15, color: 'bg-warning-600' },
-          ].map((metric, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="glass-strong rounded-2xl p-6"
-            >
-              <div className={`w-12 h-12 rounded-xl ${metric.color} flex items-center justify-center mb-4`}>
-                <metric.icon className="w-6 h-6 text-white" />
-              </div>
-              <p className="text-gray-400 text-sm mb-2">{metric.label}</p>
-              <div className="flex items-baseline">
-                <span className="text-4xl font-bold analytics-stat" data-value={metric.value}>0</span>
-                {metric.suffix && <span className="text-xl ml-1">{metric.suffix}</span>}
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        {showRealTime ? (
+          <RealTimeMetrics />
+        ) : (
+          <>
+            {/* Key Metrics */}
+            <div ref={statsRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              {[
+                { icon: Target, label: 'Total Solved', value: metrics?.problemsSolved || 248, color: 'bg-royal-600' },
+                { icon: TrendingUp, label: 'Accuracy', value: Math.round(metrics?.successRate) || 85, suffix: '%', color: 'bg-success-600' },
+                { icon: Clock, label: 'Study Hours', value: Math.floor((metrics?.totalTimeSpent || 0) / 3600) || 127, suffix: 'h', color: 'bg-navy-700' },
+                { icon: Award, label: 'Streak Days', value: metrics?.dailyStreak || 15, color: 'bg-warning-600' },
+              ].map((metric, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="glass-strong rounded-2xl p-6"
+                >
+                  <div className={`w-12 h-12 rounded-xl ${metric.color} flex items-center justify-center mb-4`}>
+                    <metric.icon className="w-6 h-6 text-white" />
+                  </div>
+                  <p className="text-gray-400 text-sm mb-2">{metric.label}</p>
+                  <div className="flex items-baseline">
+                    <span className="text-4xl font-bold analytics-stat" data-value={metric.value}>0</span>
+                    {metric.suffix && <span className="text-xl ml-1">{metric.suffix}</span>}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -251,6 +293,8 @@ const Analytics = () => {
             </ResponsiveContainer>
           </motion.div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );

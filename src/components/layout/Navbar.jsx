@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Menu, X, Zap, User, LogOut, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuthStore } from '@/store/authStore';
-import { useThemeStore } from '@/store/themeStore';
-import ThemeToggle from '@/components/ui/ThemeToggle';
+import { useAuthStore } from '../../store/authStore';
+import { useThemeStore } from '../../store/themeStore';
+import ThemeToggle from '../ui/ThemeToggle';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -41,6 +41,7 @@ const Navbar = () => {
         { name: 'Practice', path: '/practice', icon: Zap },
         { name: 'Mock Interview', path: '/mock-interview', icon: Zap },
         { name: 'Schedule Interview', path: '/schedule-interview', icon: Zap },
+        { name: 'Resume Toolkit', path: '/resume-toolkit', icon: Zap },
         { name: 'Code Playground', path: '/code-playground', icon: Zap },
       ]
     : [
