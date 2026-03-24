@@ -83,6 +83,74 @@ function getEmptyResumeStructure() {
   };
 }
 
+/**
+ * Analyze skill gap between resume and job description using AI
+ */
+async function analyzeSkillGap(resumeText, jobDescription) {
+  try {
+    const response = await groqService.createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are an expert resume and job matching analyst. Respond ONLY with valid JSON.',
+      },
+      {
+        role: 'user',
+        content: `Analyze the skill gap between this resume and job description.
+
+Resume:
+${resumeText.substring(0, 3000)}
+
+Job Description:
+${jobDescription.substring(0, 2000)}
+
+Return ONLY a JSON object:
+{
+  "matchScore": <0-100>,
+  "summary": "<2-3 sentence overall assessment>",
+  "matchingSkills": ["skill1", "skill2"],
+  "missingSkills": ["skill1", "skill2"],
+  "experienceMatch": "<assessment of experience level match>",
+  "strengthAreas": ["area1", "area2"],
+  "improvementAreas": ["area1", "area2"],
+  "recommendations": ["rec1", "rec2", "rec3"]
+}`,
+      },
+    ], { temperature: 0.4, max_tokens: 1500 });
+
+    const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+    const data = jsonMatch ? JSON.parse(jsonMatch[0]) : {
+      matchScore: 50,
+      summary: 'Analysis completed.',
+      matchingSkills: [],
+      missingSkills: [],
+      experienceMatch: 'Unable to assess',
+      strengthAreas: [],
+      improvementAreas: [],
+      recommendations: [],
+    };
+
+    return {
+      data,
+      metadata: { provider: 'groq', model: 'llama-3.3-70b-versatile' },
+    };
+  } catch (error) {
+    console.error('Skill gap analysis error:', error.message);
+    return {
+      data: {
+        matchScore: 0,
+        summary: 'Skill gap analysis temporarily unavailable.',
+        matchingSkills: [],
+        missingSkills: [],
+        experienceMatch: 'N/A',
+        strengthAreas: [],
+        improvementAreas: [],
+        recommendations: ['Try again later'],
+      },
+      metadata: { provider: 'fallback', degradedMode: true },
+    };
+  }
+}
+
 // ============= ROUTES =============
 
 /**

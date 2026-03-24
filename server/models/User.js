@@ -68,6 +68,28 @@ const userSchema = new mongoose.Schema(
         strong: [String],
       },
     },
+    // Interview history — one entry per completed interview
+    interviewHistory: [
+      {
+        interviewId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'ConversationalInterview',
+        },
+        reportId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'InterviewReport',
+        },
+        type: String,         // 'technical' | 'behavioral' | 'mixed' | 'live' | 'async'
+        role: String,         // target role / job title
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+        overallScore: Number, // 0-100
+        readinessLabel: String,
+        durationSeconds: Number,
+      },
+    ],
   },
   {
     timestamps: true,

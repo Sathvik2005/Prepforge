@@ -1,6 +1,7 @@
 import express from 'express';
 import Interview from '../models/Interview.js';
 import auth from '../middleware/auth.js';
+import { createChatCompletion } from '../services/groqService.js';
 
 const router = express.Router();
 
@@ -210,6 +211,141 @@ router.delete('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/interviews/:id/questions
+// @desc    Generate or retrieve AI questions for an interview
+// @access  Private
+router.get('/:id/questions', auth, async (req, res) => {
+  try {
+    const interview = await Interview.findById(req.params.id);
+    if (!interview) return res.status(404).json({ message: 'Interview not found' });
+    if (interview.userId.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+
+    // Return cached questions if already generated
+    if (interview.questions && interview.questions.length > 0) {
+      return res.json({ questions: interview.questions });
+    }
+
+    // Build type-specific focus
+    const focusMap = {
+      frontend: 'React, JavaScript, CSS, HTML, browser APIs, performance, accessibility',
+      backend: 'Node.js, databases, REST/GraphQL APIs, microservices, security, scalability',
+      dsa: 'arrays, linked lists, trees, graphs, dynamic programming, sorting, time/space complexity',
+      'system-design': 'distributed systems, load balancing, caching, databases, consistency, scalability',
+      behavioral: 'teamwork, leadership, conflict resolution, problem-solving, communication, STAR method',
+    };
+    const focus = focusMap[interview.type] || 'general software engineering';
+
+    const response = await createChatCompletion([
+      {
+        role: 'system',
+        content: 'You are a senior technical interviewer. Respond only with valid JSON, no explanation.',
+      },
+      {
+        role: 'user',
+        content: `Generate 8 interview questions for a ${interview.type} interview. Focus: ${focus}.
+Return ONLY a JSON array of 8 objects:
+[{"id":1,"questionText":"...","questionType":"technical","timeLimit":120},...]
+questionType must be one of: behavioral, technical, system-design, coding
+timeLimit in seconds (90-180). Mix of easy/medium/hard.`,
+      },
+    ], { temperature: 0.7, max_tokens: 2000 });
+
+    const jsonMatch = response.content.match(/\[[\s\S]*?\]/);
+    if (!jsonMatch) throw new Error('AI returned invalid format');
+
+    const parsed = JSON.parse(jsonMatch[0]);
+    interview.questions = parsed.map((q) => ({
+      questionText: q.questionText,
+      questionType: q.questionType || 'technical',
+      timeLimit: q.timeLimit || 120,
+      answered: false,
+    }));
+    await interview.save();
+
+    res.json({ questions: interview.questions });
+  } catch (error) {
+    console.error('Questions generation error:', error);
+    res.status(500).json({ message: 'Failed to generate questions', error: error.message });
+  }
+});
+
+// @route   POST /api/interviews/:id/evaluate
+// @desc    Evaluate interview answers and save AI report
+// @access  Private
+router.post('/:id/evaluate', auth, async (req, res) => {
+  try {
+    const { answers } = req.body;
+    if (!Array.isArray(answers)) return res.status(400).json({ message: 'answers array required' });
+
+    const interview = await Interview.findById(req.params.id);
+    if (!interview) return res.status(404).json({ message: 'Interview not found' });
+    if (interview.userId.toString() !== req.user.id) return res.status(403).json({ message: 'Not authorized' });
+
+    const answeredCount = answers.filter((a) => !a.skipped && a.answer?.trim()).length;
+
+    let evaluation;
+    if (answeredCount === 0) {
+      evaluation = {
+        overallScore: 0,
+        overallFeedback: 'No questions were answered during this session.',
+        perQuestion: answers.map(() => ({
+          score: 0,
+          feedback: 'Skipped',
+          strengths: [],
+          improvements: ['Practice answering this type of question'],
+        })),
+        strengths: [],
+        improvements: ['Attempt to answer questions to receive a score and feedback'],
+        readinessScore: 0,
+        explanation: 'Score is 0 because no answers were submitted.',
+      };
+    } else {
+      const qa = answers
+        .map((a, i) => `Q${i + 1}: ${a.question}\nAnswer: ${a.skipped ? '[SKIPPED]' : (a.answer?.trim() || '[empty]')}`)
+        .join('\n\n');
+
+      const response = await createChatCompletion([
+        {
+          role: 'system',
+          content: `You are an expert ${interview.type} interviewer. Evaluate answers and respond ONLY with valid JSON.`,
+        },
+        {
+          role: 'user',
+          content: `Evaluate these ${interview.type} interview answers:\n\n${qa}\n\nReturn ONLY JSON:
+{"overallScore":<0-100>,"overallFeedback":"<2-3 sentences>","perQuestion":[{"score":<0-10>,"feedback":"<specific>","strengths":["..."],"improvements":["..."]}],"strengths":["..."],"improvements":["..."],"readinessScore":<0-100>,"explanation":"<why this score>"}
+perQuestion array must have exactly ${answers.length} items matching each question in order.`,
+        },
+      ], { temperature: 0.4, max_tokens: 3000 });
+
+      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('AI returned invalid evaluation format');
+      evaluation = JSON.parse(jsonMatch[0]);
+
+      // Ensure perQuestion array matches answers length
+      if (!Array.isArray(evaluation.perQuestion) || evaluation.perQuestion.length !== answers.length) {
+        evaluation.perQuestion = answers.map((a) =>
+          a.skipped
+            ? { score: 0, feedback: 'Skipped', strengths: [], improvements: ['Attempt this question next time'] }
+            : { score: Math.round((evaluation.overallScore || 50) / 10), feedback: 'Evaluated as part of overall assessment', strengths: [], improvements: [] }
+        );
+      }
+    }
+
+    // Persist report on interview document
+    interview.status = 'completed';
+    interview.completedAt = new Date();
+    interview.overallFeedback = evaluation.overallFeedback;
+    interview.readinessScore = evaluation.readinessScore ?? evaluation.overallScore;
+    interview.aiReport = evaluation;
+    await interview.save();
+
+    res.json(evaluation);
+  } catch (error) {
+    console.error('Evaluation error:', error);
+    res.status(500).json({ message: 'Failed to evaluate answers', error: error.message });
   }
 });
 

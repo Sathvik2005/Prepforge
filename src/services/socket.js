@@ -1,7 +1,7 @@
 // Socket.IO Service - Real-time communication layer
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 
 class SocketService {
   constructor() {
@@ -58,48 +58,63 @@ class SocketService {
   // Collaboration Events
   // ===========================
   
-  joinSession(sessionId, userId) {
+  joinSession(roomId, userId, userName) {
     if (!this.socket?.connected) {
       throw new Error('Socket not connected');
     }
-    this.socket.emit('join-session', { sessionId, userId });
+    this.socket.emit('join-room', { roomId, userId, userName });
   }
 
-  leaveSession(sessionId, userId) {
+  leaveSession(roomId, userId) {
     if (this.socket?.connected) {
-      this.socket.emit('leave-session', { sessionId, userId });
+      this.socket.emit('leave-room', { roomId, userId });
     }
   }
 
-  sendContentChange(sessionId, content) {
-    this.socket.emit('content-change', { sessionId, content });
+  sendContentChange(roomId, content, userId, version) {
+    this.socket.emit('code-change', { roomId, content, userId, version });
   }
 
-  sendCursorMove(sessionId, position) {
-    this.socket.emit('cursor-move', { sessionId, position });
+  sendCursorMove(roomId, position, selection, userId, userName, color) {
+    this.socket.emit('cursor-move', { roomId, position, selection, userId, userName, color });
   }
 
-  sendTypingIndicator(sessionId, isTyping) {
-    this.socket.emit('user-typing', { sessionId, isTyping });
+  sendTypingIndicator(roomId, userId, userName, isTyping) {
+    this.socket.emit(isTyping ? 'typing-start' : 'typing-stop', { roomId, userId, userName });
   }
 
-  addComment(sessionId, comment) {
-    this.socket.emit('add-comment', { sessionId, comment });
+  sendChatMessage(roomId, message, userId) {
+    this.socket.emit('chat-message', { roomId, message, userId });
   }
 
-  resolveComment(sessionId, commentId) {
-    this.socket.emit('resolve-comment', { sessionId, commentId });
+  changeLanguage(roomId, language, userId) {
+    this.socket.emit('language-change', { roomId, language, userId });
   }
 
   // Collaboration listeners
   onContentUpdate(callback) {
-    this.socket.on('content-updated', callback);
-    return () => this.socket.off('content-updated', callback);
+    this.socket.on('code-update', callback);
+    return () => this.socket.off('code-update', callback);
   }
 
   onCursorUpdate(callback) {
-    this.socket.on('cursor-updated', callback);
-    return () => this.socket.off('cursor-updated', callback);
+    this.socket.on('cursor-update', callback);
+    return () => this.socket.off('cursor-update', callback);
+  }
+
+  onRoomState(callback) {
+    this.socket.on('room-state', callback);
+    return () => this.socket.off('room-state', callback);
+  }
+
+  onChatUpdate(callback) {
+    this.socket.on('chat-update', callback);
+    return () => this.socket.off('chat-update', callback);
+  }
+
+  onLanguageUpdate(callback) {
+    this.socket.on('language-update', callback);
+    return () => this.socket.off('language-update', callback);
   }
 
   onUserJoined(callback) {
@@ -120,7 +135,7 @@ class SocketService {
   // ===========================
   // Mock Interview Events
   // ===========================
-  
+
   connectMockInterview(token) {
     if (this.mockInterviewSocket?.connected) return this.mockInterviewSocket;
 
@@ -136,80 +151,75 @@ class SocketService {
     return this.mockInterviewSocket;
   }
 
-  joinInterview(interviewId) {
+  joinInterview(mockInterviewId, userId, role = 'candidate') {
     if (!this.mockInterviewSocket?.connected) {
-      throw new Error('Mock interview socket not connected');
+      console.warn('Mock interview socket not connected');
+      return;
     }
-    this.mockInterviewSocket.emit('join-interview', { interviewId });
+    this.mockInterviewSocket.emit('join_room', { mockInterviewId, userId, role });
+  }
+
+  joinAsRecruiter(mockInterviewId, userId) {
+    if (!this.mockInterviewSocket?.connected) return;
+    this.mockInterviewSocket.emit('recruiter_join', { mockInterviewId, userId });
   }
 
   leaveInterview(interviewId) {
-    if (this.mockInterviewSocket?.connected) {
-      this.mockInterviewSocket.emit('leave-interview', { interviewId });
-    }
+    // Server handles leave on disconnect; nothing to emit
   }
 
-  // WebRTC signaling
+  // WebRTC signaling (peer-to-peer via server relay)
   sendWebRTCOffer(interviewId, offer) {
-    this.mockInterviewSocket.emit('webrtc-offer', { interviewId, offer });
+    this.mockInterviewSocket?.emit('webrtc-offer', { interviewId, offer });
   }
 
   sendWebRTCAnswer(interviewId, answer) {
-    this.mockInterviewSocket.emit('webrtc-answer', { interviewId, answer });
+    this.mockInterviewSocket?.emit('webrtc-answer', { interviewId, answer });
   }
 
   sendICECandidate(interviewId, candidate) {
-    this.mockInterviewSocket.emit('webrtc-ice-candidate', { interviewId, candidate });
+    this.mockInterviewSocket?.emit('webrtc-ice-candidate', { interviewId, candidate });
   }
 
-  // Media controls
-  toggleVideo(interviewId, enabled) {
-    this.mockInterviewSocket.emit('toggle-video', { interviewId, enabled });
+  // Media controls (local only — server doesn't track these)
+  toggleVideo(_interviewId, _enabled) { /* local UI only */ }
+  toggleAudio(_interviewId, _enabled) { /* local UI only */ }
+  startScreenShare(_interviewId) { /* local UI only */ }
+  stopScreenShare(_interviewId) { /* local UI only */ }
+
+  // Collaboration
+  sendMessage(mockInterviewId, text) {
+    this.mockInterviewSocket?.emit('chat_message', { mockInterviewId, text });
   }
 
-  toggleAudio(interviewId, enabled) {
-    this.mockInterviewSocket.emit('toggle-audio', { interviewId, enabled });
-  }
-
-  startScreenShare(interviewId) {
-    this.mockInterviewSocket.emit('start-screen-share', { interviewId });
-  }
-
-  stopScreenShare(interviewId) {
-    this.mockInterviewSocket.emit('stop-screen-share', { interviewId });
-  }
-
-  // Collaboration features
-  sendMessage(interviewId, message) {
-    this.mockInterviewSocket.emit('send-message', { interviewId, message });
-  }
-
-  sendCodeChange(interviewId, code) {
-    this.mockInterviewSocket.emit('code-change', { interviewId, code });
+  sendCodeChange(mockInterviewId, code) {
+    this.mockInterviewSocket?.emit('code_change', { mockInterviewId, code });
   }
 
   sendWhiteboardDraw(interviewId, drawData) {
-    this.mockInterviewSocket.emit('whiteboard-draw', { interviewId, drawData });
+    this.mockInterviewSocket?.emit('whiteboard-draw', { interviewId, drawData });
+  }
+
+  sendRecruiterFeedback(mockInterviewId, comment, score) {
+    this.mockInterviewSocket?.emit('recruiter_feedback', { mockInterviewId, comment, score });
   }
 
   // Interview control
-  switchRoles(interviewId) {
-    this.mockInterviewSocket.emit('switch-roles', { interviewId });
+  switchRoles(_interviewId) { /* not implemented on server */ }
+
+  endInterview(mockInterviewId) {
+    this.mockInterviewSocket?.emit('session_complete', { mockInterviewId });
   }
 
-  endInterview(interviewId) {
-    this.mockInterviewSocket.emit('end-interview', { interviewId });
-  }
-
-  // Mock interview listeners
+  // Mock interview listeners — event names match server emits
   onPartnerJoined(callback) {
-    this.mockInterviewSocket.on('partner-joined', callback);
-    return () => this.mockInterviewSocket.off('partner-joined', callback);
+    this.mockInterviewSocket.on('peer_joined', callback);
+    return () => this.mockInterviewSocket.off('peer_joined', callback);
   }
 
   onPartnerLeft(callback) {
-    this.mockInterviewSocket.on('partner-left', callback);
-    return () => this.mockInterviewSocket.off('partner-left', callback);
+    this.mockInterviewSocket.on('peer_left', callback);
+    return () => this.mockInterviewSocket.off('peer_left', callback);
   }
 
   onWebRTCOffer(callback) {
@@ -227,34 +237,19 @@ class SocketService {
     return () => this.mockInterviewSocket.off('webrtc-ice-candidate', callback);
   }
 
-  onVideoToggled(callback) {
-    this.mockInterviewSocket.on('video-toggled', callback);
-    return () => this.mockInterviewSocket.off('video-toggled', callback);
-  }
-
-  onAudioToggled(callback) {
-    this.mockInterviewSocket.on('audio-toggled', callback);
-    return () => this.mockInterviewSocket.off('audio-toggled', callback);
-  }
-
-  onScreenShareStarted(callback) {
-    this.mockInterviewSocket.on('screen-share-started', callback);
-    return () => this.mockInterviewSocket.off('screen-share-started', callback);
-  }
-
-  onScreenShareStopped(callback) {
-    this.mockInterviewSocket.on('screen-share-stopped', callback);
-    return () => this.mockInterviewSocket.off('screen-share-stopped', callback);
-  }
+  onVideoToggled(callback) { /* not emitted by server */ return () => {}; }
+  onAudioToggled(callback) { /* not emitted by server */ return () => {}; }
+  onScreenShareStarted(callback) { /* not emitted by server */ return () => {}; }
+  onScreenShareStopped(callback) { /* not emitted by server */ return () => {}; }
 
   onMessage(callback) {
-    this.mockInterviewSocket.on('message-received', callback);
-    return () => this.mockInterviewSocket.off('message-received', callback);
+    this.mockInterviewSocket.on('chat_message', callback);
+    return () => this.mockInterviewSocket.off('chat_message', callback);
   }
 
   onCodeChange(callback) {
-    this.mockInterviewSocket.on('code-changed', callback);
-    return () => this.mockInterviewSocket.off('code-changed', callback);
+    this.mockInterviewSocket.on('code_updated', callback);
+    return () => this.mockInterviewSocket.off('code_updated', callback);
   }
 
   onWhiteboardDraw(callback) {

@@ -11,8 +11,18 @@ export const useAuthStore = create(
 
       login: (userData, token) => {
         console.log('🔐 Login:', userData.email);
+        // Normalize user shape — support both JWT API response and Firebase response formats
+        const id = userData.id || userData._id || userData.uid;
+        const normalized = {
+          ...userData,
+          uid: id,
+          id,
+          _id: id,
+          name: userData.name || userData.displayName || userData.email?.split('@')[0] || 'User',
+          displayName: userData.name || userData.displayName || userData.email?.split('@')[0] || 'User',
+        };
         set({
-          user: userData,
+          user: normalized,
           token: token,
           isAuthenticated: true,
           initialized: true,

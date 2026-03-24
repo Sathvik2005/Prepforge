@@ -15,6 +15,9 @@ import { useMediaRecorder } from '../hooks/useMediaRecorder';
 import io from 'socket.io-client';
 import './LiveInterview.css';
 
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 export default function LiveInterview({ userId, resumeId, jobDescriptionId }) {
   // Socket connection
   const [socket, setSocket] = useState(null);
@@ -55,7 +58,7 @@ export default function LiveInterview({ userId, resumeId, jobDescriptionId }) {
    * Initialize Socket.IO connection
    */
   useEffect(() => {
-    const newSocket = io('http://localhost:5000/interview', {
+    const newSocket = io(`${SOCKET_URL}/interview`, {
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionAttempts: 5
@@ -281,7 +284,7 @@ export default function LiveInterview({ userId, resumeId, jobDescriptionId }) {
         reject(new Error('Upload failed'));
       });
       
-      xhr.open('POST', 'http://localhost:5000/api/media/upload');
+      xhr.open('POST', `${API_URL}/media/upload`);
       
       // Add auth token if available
       const token = localStorage.getItem('authToken');

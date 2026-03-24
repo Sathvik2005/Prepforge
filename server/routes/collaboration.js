@@ -1,7 +1,7 @@
 import express from 'express';
 import CollaborationRoom from '../models/CollaborationRoom.js';
 import Interview from '../models/Interview.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+import { authMiddleware } from '../middleware/auth.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = express.Router();

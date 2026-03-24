@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { motion } from 'framer-motion';
@@ -14,25 +14,59 @@ import {
   BarChart3,
   Calendar,
   ChevronRight,
+  FileText,
+  Bot,
 } from 'lucide-react';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuthStore } from '../store/authStore';
 import { useTracking } from '../contexts/TrackingContext';
+import { interviewAPI } from '../services/api';
+import { loadHistory as loadMockHistory } from '../services/mockInterviewAI';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const { trackPageView, metrics, refreshMetrics } = useTracking();
   const statsRef = useRef(null);
   const cardsRef = useRef(null);
   const [streak, setStreak] = useState(7);
+  const [interviewHistory, setInterviewHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [mockHistory, setMockHistory] = useState([]);
+  const [mockHistoryLoading, setMockHistoryLoading] = useState(false);
 
   // Track page view and refresh metrics
   useEffect(() => {
     trackPageView('/dashboard');
     refreshMetrics();
   }, [trackPageView, refreshMetrics]);
+
+  // Fetch interview history
+  useEffect(() => {
+    const userId = user?._id || user?.id;
+    if (!userId) return;
+    setHistoryLoading(true);
+    interviewAPI
+      .getHistory(userId)
+      .then((res) => {
+        const items = res.data?.data || res.data?.history || [];
+        setInterviewHistory(items.slice(0, 5)); // show latest 5
+      })
+      .catch(() => {})
+      .finally(() => setHistoryLoading(false));
+  }, [user]);
+
+  // Fetch mock AI interview history
+  useEffect(() => {
+    if (!user?._id && !user?.id) return;
+    setMockHistoryLoading(true);
+    loadMockHistory()
+      .then((data) => setMockHistory(Array.isArray(data) ? data.slice(0, 4) : []))
+      .catch(() => {})
+      .finally(() => setMockHistoryLoading(false));
+  }, [user]);
 
   // Update streak from metrics
   useEffect(() => {
@@ -422,6 +456,134 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Interview History */}
+        {(historyLoading || interviewHistory.length > 0) && (
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-semibold text-navy-900 dark:text-white">Interview History</h3>
+              <Link to="/interviews" className="text-royal-600 dark:text-royal-400 text-sm font-medium hover:underline flex items-center gap-1">
+                View All <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            {historyLoading ? (
+              <div className="text-center py-8 text-surface-500 dark:text-surface-400">Loading history...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {interviewHistory.map((item, idx) => {
+                  const score = item.overallScore ?? null;
+                  const grade = score === null ? '—' : score >= 85 ? 'A' : score >= 70 ? 'B' : score >= 55 ? 'C' : score >= 40 ? 'D' : 'F';
+                  const gradeColor = grade === 'A' ? 'text-green-600' : grade === 'B' ? 'text-blue-600' : grade === 'C' ? 'text-yellow-600' : 'text-red-600';
+                  const reportPath = item.reportId
+                    ? `/interview/report/${item.reportId}`
+                    : item.interviewId
+                    ? `/interview/${item.interviewId}/report`
+                    : null;
+                  return (
+                    <motion.div
+                      key={item.interviewId || idx}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.06 }}
+                      className="glass-strong rounded-xl p-5 border border-surface-200 dark:border-surface-700 flex flex-col gap-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-royal-600 dark:text-royal-400 bg-royal-50 dark:bg-royal-900/30 px-2 py-0.5 rounded">
+                          {item.type || 'Interview'}
+                        </span>
+                        <span className={`text-2xl font-bold ${gradeColor}`}>{grade}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-navy-900 dark:text-white">{item.role || item.targetRole || 'General Interview'}</p>
+                        {item.readinessLabel && (
+                          <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">{item.readinessLabel}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {item.date ? new Date(item.date).toLocaleDateString() : '—'}
+                        </span>
+                        {score !== null && <span className="font-semibold text-navy-900 dark:text-white">{score}/100</span>}
+                      </div>
+                      {reportPath && (
+                        <button
+                          onClick={() => navigate(reportPath)}
+                          className="mt-1 flex items-center gap-1 text-xs text-royal-600 dark:text-royal-400 hover:underline self-start"
+                        >
+                          <FileText className="w-3 h-3" /> View Report
+                        </button>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Mock AI Interview History */}
+        {(mockHistoryLoading || mockHistory.length > 0) && (
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-semibold text-navy-900 dark:text-white flex items-center gap-2">
+                <Bot className="w-6 h-6 text-indigo-500" /> AI Mock Interviews
+              </h3>
+              <button
+                onClick={() => navigate('/mock-interview/history')}
+                className="text-royal-600 dark:text-royal-400 text-sm font-medium hover:underline flex items-center gap-1"
+              >
+                View All <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+            {mockHistoryLoading ? (
+              <div className="text-center py-8 text-surface-500 dark:text-surface-400">Loading...</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {mockHistory.map((report, idx) => {
+                  const g = !report.overallScore ? '—'
+                    : report.overallScore >= 85 ? 'A'
+                    : report.overallScore >= 70 ? 'B'
+                    : report.overallScore >= 55 ? 'C'
+                    : report.overallScore >= 40 ? 'D' : 'F';
+                  const gc = g === 'A' ? 'text-green-500' : g === 'B' ? 'text-blue-500' : g === 'C' ? 'text-yellow-500' : 'text-red-500';
+                  return (
+                    <motion.div
+                      key={report._id || idx}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.06 }}
+                      className="glass-strong rounded-xl p-4 border border-surface-200 dark:border-surface-700 flex flex-col gap-2 cursor-pointer hover:border-indigo-400 transition"
+                      onClick={() => navigate(`/mock-interview/${report.mockInterviewId}/report`)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase text-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 px-2 py-0.5 rounded">
+                          {report.interviewType || 'AI Mock'}
+                        </span>
+                        <span className={`text-2xl font-black ${gc}`}>{g}</span>
+                      </div>
+                      <p className="text-sm font-medium text-navy-900 dark:text-white truncate">
+                        {report.targetRole || 'Interview'}
+                      </p>
+                      <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {new Date(report.createdAt).toLocaleDateString()}
+                        </span>
+                        {report.overallScore != null && (
+                          <span className="font-semibold text-navy-900 dark:text-white">{report.overallScore}/100</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-indigo-500 flex items-center gap-1 mt-1">
+                        <FileText className="w-3 h-3" /> View Report
+                      </span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

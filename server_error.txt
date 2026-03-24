@@ -1,0 +1,49 @@
+﻿node : file:///E:/HackAura/pr
+epwiser/server/services/userT
+rackingService.js:513
+At line:1 char:1
++ node server/index.js 2>&1 
+| Out-File -FilePath 
+server_error.txt -Enco ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo           
+   : NotSpecified: (file://  
+  /E:/Hack...gService.js:5   
+ 13:String) [], RemoteExc    
+eption
+    + FullyQualifiedErrorId  
+   : NativeCommandError
+ 
+  }
+  ^
+
+SyntaxError: Missing catch 
+or finally after try
+    at 
+compileSourceTextModule (node
+:internal/modules/esm/utils:3
+57:16)
+    at 
+ModuleLoader.moduleStrategy (
+node:internal/modules/esm/tra
+nslators:109:18)
+    at #translate (node:inter
+nal/modules/esm/loader:564:20
+)
+    at afterLoad (node:intern
+al/modules/esm/loader:614:29)
+    at ModuleLoader.loadAndTr
+anslate (node:internal/module
+s/esm/loader:619:12)
+    at #createModuleJob (node
+:internal/modules/esm/loader:
+643:36)
+    at 
+#getJobFromResolveResult (nod
+e:internal/modules/esm/loader
+:353:34)
+    at ModuleLoader.getModule
+JobForImport (node:internal/m
+odules/esm/loader:318:41)
+
+Node.js v25.0.0

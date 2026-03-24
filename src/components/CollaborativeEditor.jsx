@@ -29,7 +29,8 @@ const CollaborativeEditor = ({ roomId, userId, userName, onLeave }) => {
 
   // Initialize Socket.IO connection
   useEffect(() => {
-    const newSocket = io(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/collaboration`, {
+    const SOCKET_BASE = (import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000');
+    const newSocket = io(`${SOCKET_BASE}/collaboration`, {
       transports: ['websocket'],
       reconnection: true,
       reconnectionAttempts: 5,

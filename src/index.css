@@ -306,6 +306,11 @@ body {
   border-color: var(--color-brand-secondary);
 }
 
+/* Mirror transform – used for local webcam preview */
+.mirror {
+  transform: scaleX(-1);
+}
+
 /* Card styles - clean and elevated */
 .card {
   background: var(--color-surface);

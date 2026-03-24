@@ -1,11 +1,13 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { io } from 'socket.io-client';
 
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
+
 /**
  * Real-Time Interview Hook
- * Connects to WebSocket for live interview sessions
+ * Connects to WebSocket /interview namespace for live interview sessions.
+ * Event names match server/sockets/interviewSocket.js exactly.
  */
-
 export function useRealTimeInterview(userId, resumeId, jobDescriptionId) {
   const [socket, setSocket] = useState(null);
   const [connected, setConnected] = useState(false);
@@ -18,208 +20,173 @@ export function useRealTimeInterview(userId, resumeId, jobDescriptionId) {
   const [isCompleted, setIsCompleted] = useState(false);
   const [finalEvaluation, setFinalEvaluation] = useState(null);
   const [error, setError] = useState(null);
-  
+
   const socketRef = useRef(null);
-  
+
   // Initialize WebSocket connection
   useEffect(() => {
-    const newSocket = io('http://localhost:5000/interview', {
+    const token = (() => { try { return JSON.parse(localStorage.getItem('auth-storage'))?.state?.token || ''; } catch { return ''; } })();
+    const newSocket = io(`${SOCKET_URL}/interview`, {
       transports: ['websocket', 'polling'],
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
+      auth: { token },
     });
-    
+
     socketRef.current = newSocket;
     setSocket(newSocket);
-    
-    // Connection events
+
     newSocket.on('connect', () => {
       console.log('✅ Connected to interview server');
       setConnected(true);
       setError(null);
     });
-    
+
     newSocket.on('disconnect', () => {
       console.log('❌ Disconnected from interview server');
       setConnected(false);
     });
-    
+
     newSocket.on('connect_error', (err) => {
       console.error('Connection error:', err);
       setError('Failed to connect to server. Retrying...');
     });
-    
-    // Interview events
-    newSocket.on('interview:session_started', (data) => {
-      console.log('Session started:', data);
-      setSessionState(data.state);
+
+    // Server emits 'interview_started' after start_interview callback
+    newSocket.on('interview_started', (data) => {
+      console.log('Interview started (broadcast):', data);
     });
-    
-    newSocket.on('interview:question', (data) => {
-      console.log('New question:', data);
+
+    // Server emits 'next_question' when moving to the next question
+    newSocket.on('next_question', (data) => {
+      console.log('Next question:', data);
       setCurrentQuestion(data.question);
-      setTurnNumber(data.turnNumber);
+      setTurnNumber(data.progress?.turnNumber ?? 0);
       setEvaluation(null);
       setIsEvaluating(false);
     });
-    
-    newSocket.on('interview:evaluating', (data) => {
-      console.log('Evaluating answer:', data);
-      setIsEvaluating(true);
-    });
-    
-    newSocket.on('interview:evaluation', (data) => {
-      console.log('Evaluation received:', data);
-      setEvaluation(data);
+
+    // Server emits 'follow_up_question' for follow-ups
+    newSocket.on('follow_up_question', (data) => {
+      console.log('Follow-up question:', data);
+      setCurrentQuestion(data.question);
       setIsEvaluating(false);
     });
-    
-    newSocket.on('interview:state_update', (data) => {
-      console.log('State updated:', data);
-      setSessionState(data.state);
-    });
-    
-    newSocket.on('interview:completed', (data) => {
+
+    // Server emits 'interview_completed' when session is done
+    newSocket.on('interview_completed', (data) => {
       console.log('Interview completed:', data);
       setIsCompleted(true);
-      setFinalEvaluation(data.finalEvaluation);
+      setFinalEvaluation(data.summary);
       setIsEvaluating(false);
     });
-    
-    newSocket.on('interview:error', (data) => {
+
+    // Server emits 'interview_ended' when ended early
+    newSocket.on('interview_ended', (data) => {
+      console.log('Interview ended:', data);
+      setIsCompleted(true);
+      setIsEvaluating(false);
+    });
+
+    // Server emits 'interview_error' on unhandled errors
+    newSocket.on('interview_error', (data) => {
       console.error('Interview error:', data);
       setError(data.error);
       setIsEvaluating(false);
     });
-    
-    newSocket.on('interview:hint', (data) => {
-      console.log('Hint received:', data.hint);
-      // You can handle hints in UI
-    });
-    
-    // Cleanup
+
     return () => {
       newSocket.disconnect();
     };
   }, []);
-  
-  // Start interview
+
+  // Start interview — emits 'start_interview', uses callback for first question
   const startInterview = useCallback((interviewType = 'technical') => {
-    if (!socket || !connected) {
+    if (!socketRef.current?.connected) {
       setError('Not connected to server');
       return;
     }
-    
+
     setError(null);
     setIsCompleted(false);
     setFinalEvaluation(null);
-    
-    socket.emit('interview:start', {
+
+    socketRef.current.emit('start_interview', {
       userId,
       resumeId,
       jobDescriptionId,
       interviewType,
     }, (response) => {
       if (response.success) {
-        setSessionId(response.sessionId);
-        console.log('Interview started:', response.sessionId);
+        const { sessionId: sid, firstQuestion } = response.data;
+        setSessionId(sid);
+        if (firstQuestion) {
+          setCurrentQuestion(firstQuestion);
+          setTurnNumber(1);
+        }
+        console.log('Interview started:', sid);
       } else {
         setError(response.error);
       }
     });
-  }, [socket, connected, userId, resumeId, jobDescriptionId]);
-  
-  // Submit answer
+  }, [userId, resumeId, jobDescriptionId]);
+
+  // Submit answer — emits 'submit_answer', evaluation arrives in callback
   const submitAnswer = useCallback((answer, timeSpent) => {
-    if (!socket || !sessionId) {
+    if (!socketRef.current || !sessionId) {
       setError('No active session');
       return;
     }
-    
+
     setError(null);
     setIsEvaluating(true);
-    
-    socket.emit('interview:submit_answer', {
+
+    socketRef.current.emit('submit_answer', {
       sessionId,
       answer,
-      timeSpent,
+      timeSpent: timeSpent || 0,
     }, (response) => {
-      if (!response.success) {
+      if (response.success) {
+        setEvaluation(response.data?.evaluation || null);
+        // next_question / interview_completed will arrive as broadcast events
+      } else {
         setError(response.error);
         setIsEvaluating(false);
       }
     });
-  }, [socket, sessionId]);
-  
-  // Send typing indicator
-  const sendTyping = useCallback((isTyping) => {
-    if (socket && sessionId) {
-      socket.emit('interview:typing', {
-        sessionId,
-        isTyping,
-      });
+  }, [sessionId]);
+
+  // Typing indicator — emits 'typing' (broadcast only, no callback)
+  const sendTyping = useCallback(() => {
+    if (socketRef.current?.connected && sessionId) {
+      socketRef.current.emit('typing', { sessionId });
     }
-  }, [socket, sessionId]);
-  
-  // Request hint
-  const requestHint = useCallback(() => {
-    if (!socket || !sessionId) return;
-    
-    socket.emit('interview:request_hint', {
-      sessionId,
-    }, (response) => {
-      if (!response.success) {
-        console.error('Failed to get hint:', response.error);
-      }
-    });
-  }, [socket, sessionId]);
-  
-  // Get current status
-  const getStatus = useCallback(() => {
-    if (!socket || !sessionId) return;
-    
-    socket.emit('interview:get_status', {
-      sessionId,
-    }, (response) => {
+  }, [sessionId]);
+
+  // End interview early
+  const endInterview = useCallback(() => {
+    if (!socketRef.current || !sessionId) return;
+    socketRef.current.emit('end_interview', { sessionId }, (response) => {
       if (response.success) {
-        setSessionState(response.state);
+        setIsCompleted(true);
+      } else {
+        setError(response.error);
       }
     });
-  }, [socket, sessionId]);
-  
-  // Pause interview
-  const pauseInterview = useCallback(() => {
-    if (!socket || !sessionId) return;
-    
-    socket.emit('interview:pause', {
-      sessionId,
-    }, (response) => {
-      if (response.success) {
-        console.log('Interview paused');
-      }
+  }, [sessionId]);
+
+  // Rejoin existing session room (when navigating back to an active session)
+  const joinSession = useCallback((existingSessionId) => {
+    if (!socketRef.current?.connected) return;
+    socketRef.current.emit('join_session', { sessionId: existingSessionId, userId }, (res) => {
+      if (res.success) setSessionId(existingSessionId);
     });
-  }, [socket, sessionId]);
-  
-  // Resume interview
-  const resumeInterview = useCallback(() => {
-    if (!socket || !sessionId) return;
-    
-    socket.emit('interview:resume', {
-      sessionId,
-    }, (response) => {
-      if (response.success) {
-        console.log('Interview resumed');
-      }
-    });
-  }, [socket, sessionId]);
-  
+  }, [userId]);
+
   return {
-    // Connection state
     connected,
     socket,
-    
-    // Interview state
     sessionId,
     currentQuestion,
     turnNumber,
@@ -229,15 +196,11 @@ export function useRealTimeInterview(userId, resumeId, jobDescriptionId) {
     isCompleted,
     finalEvaluation,
     error,
-    
-    // Actions
     startInterview,
     submitAnswer,
     sendTyping,
-    requestHint,
-    getStatus,
-    pauseInterview,
-    resumeInterview,
+    endInterview,
+    joinSession,
   };
 }
 

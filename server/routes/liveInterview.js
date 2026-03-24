@@ -3,6 +3,9 @@ import InterviewOrchestrator from '../services/interviewOrchestrator.js';
 import InterviewProgress from '../models/InterviewProgress.js';
 import SkillGap from '../models/SkillGap.js';
 import ConversationalInterview from '../models/ConversationalInterview.js';
+import InterviewReport from '../models/InterviewReport.js';
+import User from '../models/User.js';
+import ReportService from '../services/reportService.js';
 
 const router = express.Router();
 
@@ -348,6 +351,102 @@ router.get('/sessions/:userId', async (req, res) => {
       success: false,
       error: error.message,
     });
+  }
+});
+
+/**
+ * POST /api/interview/start
+ * Unified session-start endpoint (alias for /live/start).
+ * Accepts: userId, resumeId, jobDescription (object or raw text), interviewType, targetRole
+ * Returns: sessionId, firstQuestion, context, metadata
+ */
+router.post('/start', async (req, res) => {
+  try {
+    const { userId, resumeId, jobDescriptionId, jobDescription, interviewType, targetRole } = req.body;
+
+    if (!userId || !resumeId) {
+      return res.status(400).json({
+        success: false,
+        error: 'userId and resumeId are required',
+      });
+    }
+
+    const sessionData = await InterviewOrchestrator.startSession({
+      userId,
+      resumeId,
+      jobDescriptionId: jobDescriptionId || null,
+      jobDescription: jobDescription || null,
+      interviewType: interviewType || 'technical',
+      targetRole: targetRole || 'Software Engineer',
+    });
+
+    res.status(201).json({
+      success: true,
+      data: sessionData,
+    });
+  } catch (error) {
+    console.error('[POST /interview/start] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/interview/:sessionId/report
+ * Fetch (or generate then fetch) the full report for a completed session.
+ * If a report already exists it is returned immediately; otherwise it is generated.
+ */
+router.get('/:sessionId/report', async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const userId = req.query.userId;        // optional; used for ownership check
+
+    // Check for an existing report first
+    let report = await InterviewReport.findOne({ sessionId });
+
+    if (!report) {
+      // Attempt to generate one on-the-fly
+      if (!userId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Report not found; provide userId query param to generate it',
+        });
+      }
+      report = await ReportService.generateReport(sessionId, userId);
+    }
+
+    res.json({ success: true, data: report });
+  } catch (error) {
+    console.error('[GET /interview/:id/report] Error:', error);
+
+    if (error.message?.includes('not found')) {
+      return res.status(404).json({ success: false, error: error.message });
+    }
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * GET /api/interview/history/:userId
+ * Return the interview history array from the User document.
+ */
+router.get('/history/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await User.findById(userId).select('interviewHistory').lean();
+
+    if (!user) {
+      return res.status(404).json({ success: false, error: 'User not found' });
+    }
+
+    // Sort newest first
+    const history = (user.interviewHistory || []).sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
+
+    res.json({ success: true, data: history });
+  } catch (error) {
+    console.error('[GET /interview/history/:userId] Error:', error);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

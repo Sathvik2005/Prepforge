@@ -19,9 +19,9 @@ const RealTimeMetrics = () => {
       if (metrics.performanceTrend) {
         const trendData = metrics.performanceTrend.map(trend => ({
           date: new Date(trend.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          score: trend.averageScore,
-          solved: trend.problemsSolved,
-          accuracy: trend.successRate
+          score: trend.averageScore != null ? trend.averageScore : (trend.score || 0),
+          solved: trend.problemsSolved || 0,
+          accuracy: trend.successRate != null ? trend.successRate : 0
         }));
         setPerformanceData(trendData);
       }
@@ -56,6 +56,45 @@ const RealTimeMetrics = () => {
         <Activity className="w-12 h-12 mx-auto mb-4 text-gray-400 animate-pulse" />
         <p className="text-gray-400">Loading your real-time metrics...</p>
       </div>
+    );
+  }
+
+  // Empty state for brand-new users
+  const isNewUser = !metrics.totalActivities || metrics.totalActivities === 0;
+
+  if (isNewUser) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-strong rounded-3xl p-10 text-center max-w-xl mx-auto"
+      >
+        <Trophy className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
+        <h3 className="text-2xl font-bold text-white mb-3">Your Journey Starts Here!</h3>
+        <p className="text-gray-400 mb-8 leading-relaxed">
+          You haven't done any activity yet. Start practicing to see your real-time progress, streaks, accuracy, and performance trends here.
+        </p>
+        <div className="grid grid-cols-2 gap-4 mb-8">
+          {[
+            { icon: Code, label: 'Solve Problems', href: '/practice', color: 'bg-blue-600' },
+            { icon: Brain, label: 'Mock Interview', href: '/mock-interview', color: 'bg-purple-600' },
+            { icon: BookOpen, label: 'Create Roadmap', href: '/roadmap', color: 'bg-green-600' },
+            { icon: Calendar, label: 'Schedule Interview', href: '/schedule-interview', color: 'bg-orange-600' },
+          ].map(({ icon: Icon, label, href, color }) => (
+            <a
+              key={href}
+              href={href}
+              className={`flex flex-col items-center gap-2 p-4 rounded-xl ${color}/20 border border-white/10 hover:border-white/30 transition-colors`}
+            >
+              <div className={`w-10 h-10 rounded-full ${color} flex items-center justify-center`}>
+                <Icon className="w-5 h-5 text-white" />
+              </div>
+              <span className="text-white text-sm font-medium">{label}</span>
+            </a>
+          ))}
+        </div>
+        <p className="text-gray-500 text-xs">Analytics update in real-time as you practice</p>
+      </motion.div>
     );
   }
 
@@ -341,12 +380,12 @@ const RealTimeMetrics = () => {
                       {new Date(day.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
                     </p>
                     <p className="text-sm text-gray-400">
-                      {day.problemsSolved} problems solved • {day.successRate.toFixed(0)}% accuracy
+                      {day.problemsSolved || 0} problems solved • {(day.successRate ?? 0).toFixed(0)}% accuracy
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="text-xl font-bold text-royal-400">{day.averageScore.toFixed(0)}</p>
+                  <p className="text-xl font-bold text-royal-400">{(day.averageScore ?? day.score ?? 0).toFixed(0)}</p>
                   <p className="text-xs text-gray-500">score</p>
                 </div>
               </div>

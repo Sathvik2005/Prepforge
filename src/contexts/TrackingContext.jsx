@@ -21,6 +21,7 @@ export const useTracking = () => {
 export const TrackingProvider = ({ children, userId }) => {
   const [metrics, setMetrics] = useState(null);
   const [isTracking, setIsTracking] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const sessionId = useRef(`session-${Date.now()}`);
   const activityQueue = useRef([]);
   const startTime = useRef(Date.now());
@@ -43,7 +44,12 @@ export const TrackingProvider = ({ children, userId }) => {
 
     socket.on('connect', () => {
       console.log('[Tracking] Socket connected');
+      setIsConnected(true);
       socket.emit('join', `user-${userId}`);
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
     });
 
     socket.on('activity:tracked', (data) => {
@@ -126,7 +132,21 @@ export const TrackingProvider = ({ children, userId }) => {
       setMetrics(response.data);
     } catch (error) {
       console.error('[Tracking] Error loading metrics:', error);
-      // Don't fail silently - tracking is optional
+      // Set empty metrics so UI doesn't stay in loading state
+      setMetrics(prev => prev ?? {
+        totalActivities: 0,
+        problemsSolved: { total: 0, easy: 0, medium: 0, hard: 0 },
+        successRate: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        totalTimeSpent: 0,
+        focusTimeMinutes: 0,
+        codeExecutions: 0,
+        mockInterviews: 0,
+        roadmapsGenerated: 0,
+        skillLevels: {},
+        performanceTrend: [],
+      });
     }
   };
 
@@ -297,7 +317,8 @@ export const TrackingProvider = ({ children, userId }) => {
     trackCollaboration,
     trackResearchQuery,
     trackExport,
-    refreshMetrics: loadMetrics
+    refreshMetrics: loadMetrics,
+    isConnected
   };
 
   return (

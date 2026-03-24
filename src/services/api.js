@@ -1,21 +1,30 @@
 import axios from 'axios';
 import { API_BASE_URL } from '../utils/constants';
+import { getCurrentUserToken } from '../config/firebase.js';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Add token to requests
+// Add token to requests — prefer a fresh Firebase ID token, fall back to stored JWT
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    try {
+      // Firebase SDK auto-refreshes tokens internally; this is always non-expired
+      const freshToken = await getCurrentUserToken(false);
+      if (freshToken) {
+        config.headers.Authorization = `Bearer ${freshToken}`;
+        return config;
+      }
+    } catch (_) {
+      // No active Firebase session — fall through to stored JWT
+    }
     try {
       const authStorage = localStorage.getItem('auth-storage');
       if (authStorage) {
         const parsed = JSON.parse(authStorage);
         const token = parsed?.state?.token;
-        
         if (token && typeof token === 'string' && token.length > 0) {
-          // Ensure token doesn't have extra whitespace
           config.headers.Authorization = `Bearer ${token.trim()}`;
         }
       }
@@ -24,9 +33,7 @@ api.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Handle response errors
@@ -116,8 +123,9 @@ export const aiAPI = {
   askCompanion: (data) => api.post('/ai/companion/ask', data),
 };
 
-// Interview APIs
+// Interview APIs (merged: CRUD + pipeline)
 export const interviewAPI = {
+  // Legacy CRUD
   getAll: () => api.get('/interviews'),
   schedule: (data) => api.post('/interviews/schedule', data),
   getById: (id) => api.get(`/interviews/${id}`),
@@ -125,6 +133,19 @@ export const interviewAPI = {
   uploadRecording: (id, data) => api.post(`/interviews/${id}/recording`, data),
   updateRubric: (id, data) => api.put(`/interviews/${id}/rubric`, data),
   cancel: (id) => api.delete(`/interviews/${id}`),
+
+  // Pipeline
+  startSession: (data) => api.post('/interview/live/start', data),
+  submitAnswer: (sessionId, data) => api.post(`/interview/live/${sessionId}/answer`, data),
+  getStatus: (sessionId) => api.get(`/interview/live/${sessionId}/status`),
+  getTranscript: (sessionId) => api.get(`/interview/live/${sessionId}/transcript`),
+  getSessions: (userId, params) => api.get(`/interview/sessions/${userId}`, { params }),
+  getHistory: (userId) => api.get(`/interview/history/${userId}`),
+  getReport: (sessionId, userId) =>
+    api.get(`/interview/${sessionId}/report`, { params: userId ? { userId } : {} }),
+  getGaps: (userId, params) => api.get(`/interview/gaps/${userId}`, { params }),
+  getProgress: (userId, targetRole) =>
+    api.get(`/interview/progress/${userId}/${encodeURIComponent(targetRole)}`),
 };
 
 // Research Analytics APIs
@@ -226,6 +247,15 @@ export const mockInterviewAPI = {
   
   // Statistics
   getStats: () => api.get('/mock-interviews/stats/me'),
+
+  // AI-powered endpoints (new)
+  generateQuestion: (id, ctx) => api.post(`/mock-interviews/${id}/ai/question`, ctx),
+  generateCodingProblem: (id, ctx) => api.post(`/mock-interviews/${id}/ai/coding-problem`, ctx),
+  evaluateAnswer: (id, ctx) => api.post(`/mock-interviews/${id}/ai/evaluate`, ctx),
+  getNextDifficulty: (payload) => api.post('/mock-interviews/ai/difficulty', payload),
+  generateReport: (id, payload) => api.post(`/mock-interviews/${id}/report/generate`, payload),
+  getReport: (id) => api.get(`/mock-interviews/${id}/report`),
+  getHistory: () => api.get('/mock-interviews/history/me'),
 };
 
 // Job Matching API
@@ -250,3 +280,36 @@ export const jobAPI = {
 };
 
 export default api;
+
+// ── Reports API ──────────────────────────────────────────────────────────────
+export const reportsAPI = {
+  generate: (sessionId) => api.post(`/reports/generate/${sessionId}`),
+  list: (params) => api.get('/reports', { params }),
+  get: (reportId) => api.get(`/reports/${reportId}`),
+  getSummary: (reportId) => api.get(`/reports/${reportId}/summary`),
+  delete: (reportId) => api.delete(`/reports/${reportId}`),
+};
+
+// ── Media API ────────────────────────────────────────────────────────────────
+export const mediaAPI = {
+  /**
+   * Upload a video/audio blob.
+   * @param {Blob} blob
+   * @param {object} metadata – { sessionId, questionId, questionIndex, userId }
+   */
+  uploadVideo: (blob, metadata = {}) => {
+    const formData = new FormData();
+    const ext = blob.type?.includes('mp4') ? 'mp4' : 'webm';
+    formData.append('video', blob, `interview_${Date.now()}.${ext}`);
+    Object.entries(metadata).forEach(([k, v]) => {
+      if (v !== undefined && v !== null) formData.append(k, String(v));
+    });
+    return api.post('/media/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  getMedia: (mediaId) => api.get(`/media/${mediaId}`),
+  deleteMedia: (mediaId) => api.delete(`/media/${mediaId}`),
+  listSessionMedia: (sessionId) => api.get(`/media/session/${sessionId}`),
+};

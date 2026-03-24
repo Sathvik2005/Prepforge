@@ -1,5 +1,7 @@
 import express from 'express';
+import jwt from 'jsonwebtoken';
 import { authMiddleware } from '../middleware/auth.js';
+import User from '../models/User.js';
 import {
   trackActivity,
   getUserMetrics,
@@ -8,6 +10,19 @@ import {
 } from '../services/userTrackingService.js';
 
 const router = express.Router();
+
+/**
+ * Middleware that accepts token from query param OR Authorization header.
+ * Used for sendBeacon calls which cannot set headers.
+ */
+const flexibleAuth = async (req, res, next) => {
+  // If the token is in the query param (sendBeacon), inject it as a header
+  const queryToken = req.query.token;
+  if (queryToken && !req.headers.authorization) {
+    req.headers.authorization = `Bearer ${queryToken}`;
+  }
+  return authMiddleware(req, res, next);
+};
 
 /**
  * Track user activity
@@ -101,7 +116,7 @@ router.get('/analytics', authMiddleware, async (req, res) => {
  * Batch track activities (for offline sync)
  * POST /api/tracking/batch
  */
-router.post('/batch', authMiddleware, async (req, res) => {
+router.post('/batch', flexibleAuth, async (req, res) => {
   try {
     const { activities } = req.body;
     const userId = req.user.id; // MongoDB ObjectId as string

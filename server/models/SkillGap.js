@@ -125,7 +125,7 @@ const skillGapSchema = new mongoose.Schema({
     },
     
     resources: [{
-      type: String,
+      type: { type: String },
       url: String,
       description: String,
     }],

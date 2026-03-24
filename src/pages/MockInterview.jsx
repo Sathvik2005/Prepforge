@@ -28,8 +28,11 @@ const MockInterview = () => {
   const [isActive, setIsActive] = useState(false);
   const [timer, setTimer] = useState(0);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState([]);
+  const [answers, setAnswers] = useState([]);          // { index, value } per question
+  const [selectedMCQ, setSelectedMCQ] = useState(null); // currently selected MCQ option index
+  const [textAnswer, setTextAnswer] = useState('');     // coding / behavioral text
   const [showResults, setShowResults] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);      // computed real score
   const [showViolationPanel, setShowViolationPanel] = useState(false);
 
   // Track page view
@@ -129,7 +132,10 @@ const MockInterview = () => {
     setTimer(0);
     setCurrentQuestion(0);
     setAnswers([]);
+    setSelectedMCQ(null);
+    setTextAnswer('');
     setShowResults(false);
+    setFinalScore(0);
     
     // Start anti-cheat monitoring
     antiCheat.startMonitoring();
@@ -139,29 +145,46 @@ const MockInterview = () => {
     });
   };
 
+  // Save current answer and advance to next question or finish
+  const saveCurrentAnswer = () => {
+    const qIdx = currentQuestion % 2; // wraps into 2-question sample bank
+    const newAnswer = {
+      questionIndex: currentQuestion,
+      ...(selectedRound?.type === 'mcq'
+        ? { selected: selectedMCQ, correct: mockQuestions.mcq[qIdx].correct }
+        : { text: textAnswer }),
+    };
+    const updated = [...answers, newAnswer];
+    setAnswers(updated);
+    setSelectedMCQ(null);
+    setTextAnswer('');
+    return updated;
+  };
+
+  const calculateScore = (allAnswers, type) => {
+    if (type === 'mcq') {
+      const correct = allAnswers.filter((a) => a.selected === a.correct).length;
+      return Math.round((correct / Math.max(allAnswers.length, 1)) * 100);
+    }
+    // For coding/behavioral: score based on answer length as a proxy
+    const filledAnswers = allAnswers.filter((a) => (a.text || '').trim().length > 20).length;
+    return Math.min(100, 50 + Math.round((filledAnswers / Math.max(allAnswers.length, 1)) * 50));
+  };
+
   const endRound = () => {
+    const allAnswers = saveCurrentAnswer();
+    const score = calculateScore(allAnswers, selectedRound?.type);
+    setFinalScore(score);
     setIsActive(false);
     setShowResults(true);
     
     // Stop anti-cheat monitoring
     antiCheat.stopMonitoring();
     
-    generateFeedback();
-    
-    // Track interview completion
-    const score = Math.floor(Math.random() * 30) + 70;
-    trackMockInterview({
-      type: selectedRound?.type,
-      score,
-      duration: timer,
-      questionsAttempted: currentQuestion + 1,
-      violations: antiCheat.violations?.length || 0
-    });
-  };
-
-  const generateFeedback = () => {
-    const score = Math.floor(Math.random() * 30) + 70;
     toast.success(`Interview completed! Score: ${score}/100`);
+    
+    // Track interview completion — signature: (interviewId, score, duration)
+    trackMockInterview(selectedRound?.type || 'mock', score, timer * 1000);
   };
 
   const formatTime = (seconds) => {
@@ -272,7 +295,7 @@ const MockInterview = () => {
   }
 
   if (showResults) {
-    const score = Math.floor(Math.random() * 30) + 70;
+    const score = finalScore;
     const feedback = {
       strengths: [
         'Strong problem-solving approach',
@@ -487,10 +510,17 @@ const MockInterview = () => {
               {mockQuestions.mcq[currentQuestion % 2].options.map((option, index) => (
                 <button
                   key={index}
-                  className="w-full p-4 rounded-xl glass hover:glass-strong transition-all text-left"
+                  onClick={() => setSelectedMCQ(index)}
+                  className={`w-full p-4 rounded-xl transition-all text-left border-2 ${
+                    selectedMCQ === index
+                      ? 'border-royal-500 bg-royal-500/20'
+                      : 'glass hover:glass-strong border-transparent'
+                  }`}
                 >
                   <div className="flex items-center">
-                    <span className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center mr-4 font-semibold">
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center mr-4 font-semibold ${
+                      selectedMCQ === index ? 'bg-royal-500 text-white' : 'bg-white/10'
+                    }`}>
                       {String.fromCharCode(65 + index)}
                     </span>
                     <span>{option}</span>
@@ -503,6 +533,8 @@ const MockInterview = () => {
           {selectedRound.type === 'coding' && (
             <div className="space-y-4">
               <textarea
+                value={textAnswer}
+                onChange={(e) => setTextAnswer(e.target.value)}
                 placeholder="Write your solution here..."
                 className="w-full h-64 p-4 rounded-xl glass text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
               />
@@ -521,6 +553,8 @@ const MockInterview = () => {
                 </p>
               </div>
               <textarea
+                value={textAnswer}
+                onChange={(e) => setTextAnswer(e.target.value)}
                 placeholder="Type your answer here..."
                 className="w-full h-48 p-4 rounded-xl glass text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
@@ -530,12 +564,14 @@ const MockInterview = () => {
           <button
             onClick={() => {
               if (currentQuestion < selectedRound.questions - 1) {
+                saveCurrentAnswer();
                 setCurrentQuestion((prev) => prev + 1);
               } else {
                 endRound();
               }
             }}
-            className="w-full mt-6 py-3 rounded-xl bg-royal-600 hover:bg-royal-700 text-white font-semibold transition-all"
+            disabled={selectedRound.type === 'mcq' && selectedMCQ === null}
+            className="w-full mt-6 py-3 rounded-xl bg-royal-600 hover:bg-royal-700 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold transition-all"
           >
             {currentQuestion < selectedRound.questions - 1 ? 'Next Question' : 'Finish Interview'}
           </button>

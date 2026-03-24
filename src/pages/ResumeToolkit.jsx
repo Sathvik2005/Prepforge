@@ -151,7 +151,7 @@ export default function ResumeToolkit() {
   useEffect(() => {
     if (!user) return;
 
-    const socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5000', {
+    const socket = io(import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000', {
       transports: ['websocket', 'polling'],
     });
 
@@ -209,9 +209,14 @@ export default function ResumeToolkit() {
       showSuccess('Resume processed successfully! 📄');
     } catch (err) {
       console.error('❌ Resume processing error:', err);
-      const errorMessage = err.response?.data?.message || err.message || 'Failed to process resume';
+      const status = err.response?.status;
+      const errorData = err.response?.data;
+      // Give a clearer message for DB startup (503)
+      const errorMessage = (status === 503 && errorData?.retry)
+        ? (errorData.message || 'Database is starting up. Please wait a moment and try again.')
+        : (errorData?.message || err.message || 'Failed to process resume');
       setError(errorMessage);
-      showApiError(err, 'Failed to process resume');
+      showApiError(err, errorMessage);
     } finally {
       setLoading(false);
     }
@@ -367,6 +372,15 @@ export default function ResumeToolkit() {
       // Handle specific error codes from backend
       const errorData = err.response?.data;
       const errorCode = errorData?.code;
+      const status = err.response?.status;
+
+      // 503 = DB starting up — show the server's specific message, not a generic one
+      if (status === 503 && errorData?.retry) {
+        const msg = errorData.message || 'Database is starting up. Please try again in a moment.';
+        setError(msg);
+        showError(msg, { duration: 6000 });
+        return;
+      }
       
       let errorMessage = 'Analysis failed. Please try again.';
       

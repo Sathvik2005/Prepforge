@@ -166,7 +166,7 @@ export const showApiError = (error, fallbackMessage = 'An error occurred') => {
     message = error.message;
   }
   
-  // Handle specific status codes
+  // Handle specific status codes — only override message if no specific one was set by the server
   if (error?.response?.status === 429) {
     message = 'Too many requests. Please try again later.';
   } else if (error?.response?.status === 401) {
@@ -175,7 +175,8 @@ export const showApiError = (error, fallbackMessage = 'An error occurred') => {
     message = 'You do not have permission to perform this action.';
   } else if (error?.response?.status === 404) {
     message = 'Resource not found.';
-  } else if (error?.response?.status >= 500) {
+  } else if (error?.response?.status >= 500 && message === fallbackMessage) {
+    // Only use the generic message when the server did not send a specific one
     message = 'Server error. Please try again later.';
   }
   

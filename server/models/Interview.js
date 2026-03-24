@@ -117,6 +117,11 @@ const InterviewSchema = new mongoose.Schema({
       default: false,
     },
   },
+  // AI-generated report after self-interview session
+  aiReport: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
 }, {
   timestamps: true,
 });

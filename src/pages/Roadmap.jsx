@@ -18,14 +18,17 @@ import {
   Plus,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useAuthStore } from '../store/authStore';
 import { useTracking } from '../contexts/TrackingContext';
+import api from '../services/api';
 import toast from 'react-hot-toast';
-import axios from 'axios';
+
+// localStorage cache helpers — roadmaps persist across server restarts
+const cacheKey = (uid) => `prepforge-roadmaps-${uid}`;
+const saveCache = (uid, maps) => { try { localStorage.setItem(cacheKey(uid), JSON.stringify(maps)); } catch (_) {} };
+const loadCache = (uid) => { try { const v = localStorage.getItem(cacheKey(uid)); return v ? JSON.parse(v) : null; } catch { return null; } };
 
 const Roadmap = () => {
   const { currentUser } = useAuth();
-  const { token } = useAuthStore();
   const { trackPageView, track } = useTracking();
   const [roadmaps, setRoadmaps] = useState([]);
   const [selectedRoadmap, setSelectedRoadmap] = useState(null);
@@ -36,13 +39,6 @@ const Roadmap = () => {
   useEffect(() => {
     trackPageView('/roadmap');
   }, [trackPageView]);
-
-  // Axios config with authentication
-  const axiosConfig = {
-    headers: {
-      Authorization: `Bearer ${token}`
-    }
-  };
 
   // Form state for roadmap generation
   const [formData, setFormData] = useState({
@@ -55,11 +51,16 @@ const Roadmap = () => {
     preferredTopics: '',
   });
 
+  // Immediately restore from cache so roadmaps show before server responds
   useEffect(() => {
-    if (currentUser?.uid) {
-      loadUserRoadmaps();
+    if (!currentUser?.uid) return;
+    const cached = loadCache(currentUser.uid);
+    if (cached && cached.length > 0) {
+      setRoadmaps(cached);
+      setSelectedRoadmap(prev => prev || cached[0]);
     }
-  }, [currentUser]);
+    loadUserRoadmaps();
+  }, [currentUser?.uid]);
 
   const loadUserRoadmaps = async () => {
     if (!currentUser?.uid) {
@@ -69,16 +70,27 @@ const Roadmap = () => {
     
     try {
       setLoading(true);
-      const response = await axios.get(`/api/roadmap/user/${currentUser.uid}`, axiosConfig);
+      const response = await api.get(`/roadmap/user/${currentUser.uid}`);
       if (response.data.success) {
-        setRoadmaps(response.data.roadmaps);
-        if (response.data.roadmaps.length > 0) {
-          setSelectedRoadmap(response.data.roadmaps[0]);
+        const serverMaps = response.data.roadmaps;
+        if (serverMaps.length > 0) {
+          // Server has data — it's authoritative
+          setRoadmaps(serverMaps);
+          setSelectedRoadmap(prev => prev?._id ? prev : serverMaps[0]);
+          saveCache(currentUser.uid, serverMaps);
+        } else {
+          // Server returned empty (in-memory DB may have reset) — keep cache
+          const cached = loadCache(currentUser.uid);
+          if (!cached || cached.length === 0) {
+            setRoadmaps([]); // Truly no roadmaps
+          }
+          // If we have cached data, keep showing it — don't overwrite with empty server response
         }
       }
     } catch (error) {
       console.error('Error loading roadmaps:', error);
-      toast.error('Failed to load roadmaps');
+      // Don't show a toast if we already have cached data shown
+      if (roadmaps.length === 0) toast.error('Failed to load roadmaps');
     } finally {
       setLoading(false);
     }
@@ -96,7 +108,7 @@ const Roadmap = () => {
       setLoading(true);
       toast.loading('Generating your personalized roadmap...');
 
-      const response = await axios.post('/api/roadmap/generate', {
+      const response = await api.post('/roadmap/generate', {
         goal: formData.goal,
         currentLevel: formData.currentLevel,
         targetRole: formData.targetRole,
@@ -106,18 +118,20 @@ const Roadmap = () => {
         },
         skills: formData.skills.split(',').map((s) => s.trim()).filter(Boolean),
         preferredTopics: formData.preferredTopics.split(',').map((s) => s.trim()).filter(Boolean),
-      }, axiosConfig);
+      });
 
       toast.dismiss();
 
       if (response.data.success && response.data.roadmap) {
         toast.success('Roadmap generated successfully!');
         
-        // Add new roadmap to list and select it
+        // Add new roadmap to list, select it, and persist to cache
         const newRoadmap = response.data.roadmap;
-        setRoadmaps([newRoadmap, ...roadmaps]);
+        const updatedMaps = [newRoadmap, ...roadmaps];
+        setRoadmaps(updatedMaps);
         setSelectedRoadmap(newRoadmap);
         setShowGenerator(false);
+        if (currentUser?.uid) saveCache(currentUser.uid, updatedMaps);
         
         // Track event
         track('roadmap_generated', {
@@ -161,14 +175,17 @@ const Roadmap = () => {
 
     try {
       const endpoint = completed ? 'complete' : 'uncomplete';
-      const response = await axios.put(
-        `/api/roadmap/${selectedRoadmap._id}/milestone/${milestoneId}/${endpoint}`,
-        {},
-        axiosConfig
+      const response = await api.put(
+        `/roadmap/${selectedRoadmap._id}/milestone/${milestoneId}/${endpoint}`,
+        {}
       );
       
       if (response.data.success) {
-        setSelectedRoadmap(response.data.roadmap);
+        const updatedRoadmap = response.data.roadmap;
+        const updatedMaps = roadmaps.map((r) => r._id === updatedRoadmap._id ? updatedRoadmap : r);
+        setSelectedRoadmap(updatedRoadmap);
+        setRoadmaps(updatedMaps);
+        if (currentUser?.uid) saveCache(currentUser.uid, updatedMaps);
         
         // Track milestone completion
         track('milestone_toggled', {
@@ -176,12 +193,6 @@ const Roadmap = () => {
           milestoneId,
           completed
         });
-        
-        // Update roadmaps list
-        setRoadmaps(roadmaps.map((r) => 
-          r._id === response.data.roadmap._id ? response.data.roadmap : r
-        ));
-        
         toast.success(completed ? 'Milestone completed!' : 'Milestone unmarked');
       }
     } catch (error) {
@@ -194,13 +205,15 @@ const Roadmap = () => {
     if (!confirm('Are you sure you want to delete this roadmap?')) return;
 
     try {
-      const response = await axios.delete(`/api/roadmap/${roadmapId}`, axiosConfig);
+      const response = await api.delete(`/roadmap/${roadmapId}`);
 
       if (response.data.success) {
-        setRoadmaps(roadmaps.filter((r) => r._id !== roadmapId));
+        const updatedMaps = roadmaps.filter((r) => r._id !== roadmapId);
+        setRoadmaps(updatedMaps);
         if (selectedRoadmap?._id === roadmapId) {
-          setSelectedRoadmap(roadmaps[0] || null);
+          setSelectedRoadmap(updatedMaps[0] || null);
         }
+        if (currentUser?.uid) saveCache(currentUser.uid, updatedMaps);
         toast.success('Roadmap deleted');
       }
     } catch (error) {

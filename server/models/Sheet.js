@@ -99,8 +99,7 @@ const sheetSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-sheetSchema.index({ slug: 1 });
+// Index for faster queries (slug unique: true already creates an index)
 sheetSchema.index({ type: 1 });
 
 export default mongoose.model('Sheet', sheetSchema);

@@ -69,6 +69,10 @@ const InterviewScheduling = React.lazy(() => lazyRetry(() => import('./pages/Int
 const VideoInterview = React.lazy(() => lazyRetry(() => import('./pages/VideoInterview')));
 const AsyncInterview = React.lazy(() => lazyRetry(() => import('./pages/AsyncInterview')));
 const ResearchDashboard = React.lazy(() => lazyRetry(() => import('./pages/ResearchDashboard')));
+const InterviewReportViewer = React.lazy(() => lazyRetry(() => import('./pages/InterviewReportViewer')));
+const MockInterviewHistory = React.lazy(() => lazyRetry(() => import('./pages/MockInterviewHistory')));
+const InterviewRoom = React.lazy(() => lazyRetry(() => import('./pages/InterviewRoom')));
+const InterviewReport = React.lazy(() => lazyRetry(() => import('./pages/InterviewReport')));
 
 // Theme Store
 import { useThemeStore } from './store/themeStore';
@@ -169,7 +173,7 @@ function App() {
   return (
     <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
-        <TrackingProvider userId={user?.uid}>
+        <TrackingProvider userId={user?.id || user?.uid}>
           <div className="min-h-screen flex flex-col bg-surface-50 dark:bg-surface-900 text-surface-900 dark:text-surface-50 transition-colors duration-500">
             {/* Scroll Progress Indicator */}
             <ScrollProgress />
@@ -261,9 +265,20 @@ function App() {
                     <Route path="/dsa-sheets/:sheetId" element={<SheetDetail />} />
                     <Route path="/resume-toolkit" element={<ProtectedRoute><ResumeToolkit /></ProtectedRoute>} />
                     <Route path="/schedule-interview" element={<ProtectedRoute><InterviewScheduling /></ProtectedRoute>} />
+                    <Route path="/video-interview" element={<ProtectedRoute><VideoInterview /></ProtectedRoute>} />
                     <Route path="/video-interview/:sessionId" element={<ProtectedRoute><VideoInterview /></ProtectedRoute>} />
+                    <Route path="/async-interview" element={<ProtectedRoute><AsyncInterview /></ProtectedRoute>} />
                     <Route path="/async-interview/:interviewId" element={<ProtectedRoute><AsyncInterview /></ProtectedRoute>} />
                     <Route path="/research" element={<ProtectedRoute><ResearchDashboard /></ProtectedRoute>} />
+                    {/* Interview report viewer */}
+                    <Route path="/interview/report/:reportId" element={<ProtectedRoute><InterviewReportViewer /></ProtectedRoute>} />
+                    <Route path="/interview/:sessionId/report" element={<ProtectedRoute><InterviewReportViewer /></ProtectedRoute>} />
+                    {/* AI Interview Room & Report */}
+                    <Route path="/interview-room/:id" element={<ProtectedRoute><InterviewRoom /></ProtectedRoute>} />
+                    <Route path="/interview-report/:id" element={<ProtectedRoute><InterviewReport /></ProtectedRoute>} />
+                    {/* Mock Interview AI Report & History */}
+                    <Route path="/mock-interview/:sessionId/report" element={<ProtectedRoute><MockInterviewHistory /></ProtectedRoute>} />
+                    <Route path="/mock-interview/history" element={<ProtectedRoute><MockInterviewHistory /></ProtectedRoute>} />
                   </Routes>
                 </React.Suspense>
               </ErrorBoundary>

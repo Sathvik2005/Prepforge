@@ -1,12 +1,37 @@
 // MockInterviewRoom - Complete Video Interview Component with Voice Agent
 import React, { useState, useEffect, useRef } from 'react';
-import { Video, VideoOff, Mic, MicOff, Monitor, MonitorOff, MessageSquare, Code, PenTool, X, PhoneOff, Users, Clock, Star, Volume2, VolumeX } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Video, VideoOff, Mic, MicOff, Monitor, MonitorOff, MessageSquare, Code, PenTool, X, PhoneOff, Users, Clock, Star, Volume2, VolumeX, Bot, BarChart2, FileText } from 'lucide-react';
 import socketService from '../services/socket';
 import voiceAgent from '../services/voiceAgent';
 import { mockInterviewAPI } from '../services/api';
+import { useInterviewSessionStore } from '../store/interviewSessionStore';
+import useMockInterviewAI from '../hooks/useMockInterviewAI';
+import MockInterviewAIPanel from './MockInterviewAIPanel';
 import './MockInterviewRoom.css';
 
-const MockInterviewRoom = ({ interviewId, onExit }) => {
+const MockInterviewRoom = ({ interviewId, onExit, interviewType = 'technical', difficulty = 'medium', resumeText = '', jobDescription = '' }) => {
+  const navigate = useNavigate();
+  const { completeSession } = useInterviewSessionStore();
+
+  // ── AI Mode state ─────────────────────────────────────
+  const [aiMode, setAiMode] = useState(true); // true = solo AI, false = human partner
+  const [aiMuted, setAiMuted] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+
+  // ── Auth (for userId) ─────────────────────────────────
+  const userId = (() => { try { return JSON.parse(localStorage.getItem('auth-storage'))?.state?.user?._id; } catch { return null; } })();
+
+  // ── AI hook (all AI features centralised here) ────────
+  const ai = useMockInterviewAI({
+    mockInterviewId: interviewId,
+    userId,
+    interviewType,
+    difficulty,
+    resumeText,
+    jobDescription,
+  });
+
   // State management
   const [interview, setInterview] = useState(null);
   const [partner, setPartner] = useState(null);
@@ -19,7 +44,7 @@ const MockInterviewRoom = ({ interviewId, onExit }) => {
   const [interimTranscript, setInterimTranscript] = useState('');
   
   // UI states
-  const [activeTab, setActiveTab] = useState('video'); // video, chat, code, whiteboard
+  const [activeTab, setActiveTab] = useState(aiMode ? 'ai' : 'video'); // video, chat, code, ai
   const [messages, setMessages] = useState([]);
   const [code, setCode] = useState('// Write your code here...\n\n');
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -59,17 +84,17 @@ const MockInterviewRoom = ({ interviewId, onExit }) => {
     try {
       // Fetch interview details
       const response = await mockInterviewAPI.get(interviewId);
-      setInterview(response.data);
+      setInterview(response.data?.data || response.data);
 
       // Connect to mock interview socket
-      const token = localStorage.getItem('token');
+      const token = (() => { try { return JSON.parse(localStorage.getItem('auth-storage'))?.state?.token || ''; } catch { return ''; } })();
       socketService.connectMockInterview(token);
 
       // Setup socket listeners
       setupSocketListeners();
 
       // Join interview room
-      socketService.joinInterview(interviewId);
+      socketService.joinInterview(interviewId, userId, 'candidate');
 
       // Initialize media
       await initializeMedia();
@@ -308,9 +333,27 @@ const MockInterviewRoom = ({ interviewId, onExit }) => {
     try {
       await mockInterviewAPI.end(interviewId);
       socketService.endInterview(interviewId);
-      setShowFeedbackModal(true);
+      completeSession();
+      // If in AI mode, generate report before showing modal
+      if (aiMode && ai.turns.length > 0) {
+        await ai.completeSession();
+        setShowReportModal(true);
+      } else {
+        setShowFeedbackModal(true);
+      }
     } catch (error) {
       console.error('Failed to end interview:', error);
+      setShowFeedbackModal(true);
+    }
+  };
+
+  const goToReport = () => {
+    setShowFeedbackModal(false);
+    setShowReportModal(false);
+    if (interviewId) {
+      navigate(`/mock-interview/${interviewId}/report`);
+    } else if (onExit) {
+      onExit();
     }
   };
 
@@ -428,30 +471,72 @@ const MockInterviewRoom = ({ interviewId, onExit }) => {
         {/* Tabs */}
         <div className="panel-tabs">
           <button
+            className={activeTab === 'ai' ? 'active' : ''}
+            onClick={() => setActiveTab('ai')}
+            title="AI Interviewer"
+          >
+            <Bot size={18} />
+            AI
+          </button>
+          <button
             className={activeTab === 'video' ? 'active' : ''}
             onClick={() => setActiveTab('video')}
           >
-            <Video size={20} />
-            Video
+            <Video size={18} />
+            Info
           </button>
           <button
             className={activeTab === 'chat' ? 'active' : ''}
             onClick={() => setActiveTab('chat')}
           >
-            <MessageSquare size={20} />
+            <MessageSquare size={18} />
             Chat
           </button>
           <button
             className={activeTab === 'code' ? 'active' : ''}
             onClick={() => setActiveTab('code')}
           >
-            <Code size={20} />
+            <Code size={18} />
             Code
           </button>
         </div>
 
         {/* Tab Content */}
         <div className="panel-content">
+
+          {/* ── AI Interviewer Tab ──────────────────────────── */}
+          {activeTab === 'ai' && (
+            <MockInterviewAIPanel
+              currentQuestion={ai.currentQuestion}
+              currentAnswer={ai.currentAnswer}
+              setCurrentAnswer={ai.setCurrentAnswer}
+              answerSubmitted={ai.answerSubmitted}
+              currentEvaluation={ai.currentEvaluation}
+              evaluationComplete={ai.evaluationComplete}
+              followUpQuestion={ai.followUpQuestion}
+              currentDifficulty={ai.currentDifficulty}
+              codingProblem={ai.codingProblem}
+              isAISpeaking={ai.isAISpeaking}
+              aiText={ai.aiText}
+              isListening={ai.isListening}
+              transcript={ai.transcript}
+              isLoading={ai.isLoading}
+              turns={ai.turns}
+              requestNextQuestion={ai.requestNextQuestion}
+              requestCodingProblem={ai.requestCodingProblem}
+              submitAnswer={ai.submitAnswer}
+              speakText={ai.speakText}
+              stopSpeaking={ai.stopSpeaking}
+              startListening={ai.startListening}
+              stopListening={ai.stopListening}
+              muted={aiMuted}
+              onMuteToggle={() => {
+                if (!aiMuted) ai.stopSpeaking();
+                setAiMuted((v) => !v);
+              }}
+            />
+          )}
+
           {activeTab === 'video' && (
             <div className="video-info">
               <h3>Interview Details</h3>
@@ -554,6 +639,17 @@ const MockInterviewRoom = ({ interviewId, onExit }) => {
         </div>
 
         <div className="controls-right">
+          {ai.turns.length > 0 && (
+            <button
+              className="control-btn"
+              onClick={() => setShowReportModal(true)}
+              title="View AI Report"
+              style={{ background: 'rgba(99,102,241,0.2)', color: '#818cf8' }}
+            >
+              <BarChart2 size={20} />
+              Report
+            </button>
+          )}
           <button className="control-btn end-call" onClick={endInterview}>
             <PhoneOff size={24} />
             End Interview
@@ -565,10 +661,17 @@ const MockInterviewRoom = ({ interviewId, onExit }) => {
       {showFeedbackModal && (
         <FeedbackModal
           interviewId={interviewId}
-          onClose={() => {
-            setShowFeedbackModal(false);
-            onExit();
-          }}
+          onClose={goToReport}
+        />
+      )}
+
+      {/* AI Report Ready Modal */}
+      {showReportModal && (
+        <AIReportModal
+          report={ai.finalReport}
+          turns={ai.turns}
+          onClose={() => setShowReportModal(false)}
+          onViewFull={goToReport}
         />
       )}
     </div>
@@ -671,6 +774,111 @@ const FeedbackModal = ({ interviewId, onClose }) => {
           </button>
           <button className="btn-primary" onClick={handleSubmit}>
             Submit Feedback
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════════
+   AI Report Modal  – quick summary after AI mock interview
+════════════════════════════════════════════════════════════ */
+const AIReportModal = ({ report, turns, onClose, onViewFull }) => {
+  const dims = ['clarity', 'technicalAccuracy', 'depth', 'structure', 'relevance'];
+  const scores = report?.sectionScores || {};
+  const overall = report?.overallScore ?? 0;
+
+  const grade =
+    overall >= 85 ? 'A' : overall >= 70 ? 'B' : overall >= 55 ? 'C' : overall >= 40 ? 'D' : 'F';
+
+  const gradeColor =
+    grade === 'A' ? '#22c55e' : grade === 'B' ? '#3b82f6' : grade === 'C' ? '#f59e0b' : '#ef4444';
+
+  return (
+    <div className="feedback-modal-overlay" style={{ zIndex: 9999 }}>
+      <div
+        className="feedback-modal"
+        style={{ maxWidth: 540, background: '#0f172a', color: '#f1f5f9', border: '1px solid #1e293b' }}
+      >
+        {/* Header */}
+        <div className="modal-header" style={{ borderColor: '#1e293b' }}>
+          <h2 style={{ color: '#f1f5f9' }}>🤖 AI Interview Report</h2>
+          <button onClick={onClose} style={{ color: '#94a3b8' }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div className="modal-content" style={{ gap: 20 }}>
+          {/* Overall score */}
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ fontSize: 56, fontWeight: 800, color: gradeColor, lineHeight: 1 }}>
+              {grade}
+            </div>
+            <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 4 }}>
+              Overall Score: {overall}/100 · {report?.readinessLabel?.replace('-', ' ') || 'N/A'}
+            </div>
+          </div>
+
+          {/* Section scores */}
+          {Object.keys(scores).length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              {dims.map((d) => (
+                <div
+                  key={d}
+                  style={{ background: '#1e293b', borderRadius: 8, padding: '10px 6px', textAlign: 'center' }}
+                >
+                  <div style={{ fontSize: 20, fontWeight: 700, color: '#818cf8' }}>{scores[d] ?? 0}</div>
+                  <div style={{ fontSize: 9, color: '#94a3b8', marginBottom: 2 }}>/100</div>
+                  <div style={{ fontSize: 10, color: '#64748b', textTransform: 'capitalize' }}>
+                    {d.replace(/([A-Z])/g, ' $1').trim()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Strengths */}
+          {report?.strengths?.length > 0 && (
+            <div>
+              <p style={{ fontWeight: 600, color: '#22c55e', marginBottom: 6, fontSize: 13 }}>✅ Strengths</p>
+              <ul style={{ listStyle: 'disc', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {report.strengths.map((s, i) => (
+                  <li key={i} style={{ fontSize: 12, color: '#cbd5e1' }}>{s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Improvements */}
+          {report?.improvements?.length > 0 && (
+            <div>
+              <p style={{ fontWeight: 600, color: '#f59e0b', marginBottom: 6, fontSize: 13 }}>💡 Improvements</p>
+              <ul style={{ listStyle: 'disc', paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                {report.improvements.map((s, i) => (
+                  <li key={i} style={{ fontSize: 12, color: '#cbd5e1' }}>{s}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Questions answered breakdown */}
+          <div style={{ fontSize: 12, color: '#64748b', background: '#1e293b', borderRadius: 8, padding: 10 }}>
+            <span>Questions asked: {turns.length}</span>
+            {' · '}
+            <span>Coding solved: {report?.codingProblemsSolved ?? 0}</span>
+            {' · '}
+            <span>Duration: {report?.durationSeconds ? `${Math.round(report.durationSeconds / 60)} min` : 'N/A'}</span>
+          </div>
+        </div>
+
+        <div className="modal-footer" style={{ borderColor: '#1e293b' }}>
+          <button className="btn-secondary" onClick={onClose} style={{ color: '#94a3b8', background: '#1e293b' }}>
+            Close
+          </button>
+          <button className="btn-primary" onClick={onViewFull} style={{ background: '#4f46e5' }}>
+            <FileText size={14} style={{ marginRight: 6 }} />
+            Full Report
           </button>
         </div>
       </div>

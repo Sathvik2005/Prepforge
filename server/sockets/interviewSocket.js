@@ -9,6 +9,55 @@
  */
 
 import ImprovedInterviewOrchestrator from '../services/improvedInterviewOrchestrator.js';
+import ConversationalInterview from '../models/ConversationalInterview.js';
+import InterviewReport from '../models/InterviewReport.js';
+import User from '../models/User.js';
+import ReportService from '../services/reportService.js';
+
+/**
+ * Persist completed session to user interview history.
+ * Idempotent – skips if the sessionId already exists in history.
+ */
+async function persistInterviewHistory(sessionId, userId, summary) {
+  try {
+    const session = await ConversationalInterview.findById(sessionId).lean();
+    if (!session) return;
+
+    // Generate (or retrieve existing) report
+    let report;
+    try {
+      report = await ReportService.generateReport(sessionId, userId);
+    } catch (err) {
+      console.warn('[interviewSocket] Could not generate report:', err.message);
+    }
+
+    // Avoid duplicate history entries
+    const user = await User.findById(userId);
+    if (!user) return;
+
+    const already = (user.interviewHistory || []).some(
+      (h) => h.interviewId?.toString() === sessionId.toString()
+    );
+
+    if (!already) {
+      user.interviewHistory = user.interviewHistory || [];
+      user.interviewHistory.push({
+        interviewId: session._id,
+        reportId: report?._id || null,
+        type: session.interviewType || 'technical',
+        role: session.targetRole || 'Software Engineer',
+        date: new Date(),
+        overallScore: summary?.overallScore || session.finalEvaluation?.scores?.overall || 0,
+        readinessLabel: report?.readinessLabel || summary?.readinessLevel || 'Needs Work',
+        durationSeconds: session.turns?.reduce((acc, t) => acc + (t.answer?.timeSpent || 0), 0) || 0,
+      });
+      await user.save();
+      console.log(`[interviewSocket] Saved interview history for user ${userId}`);
+    }
+  } catch (err) {
+    console.error('[interviewSocket] persistInterviewHistory error:', err.message);
+  }
+}
 
 export default function setupInterviewSocket(io) {
   const interviewNamespace = io.of('/interview');
@@ -43,8 +92,9 @@ export default function setupInterviewSocket(io) {
         // Join room for this session
         socket.join(`session_${result.sessionId}`);
         
-        // Store session ID in socket
+        // Store session ID and userId in socket for later use
         socket.sessionId = result.sessionId;
+        socket.userId = userId;
         
         console.log(`Interview started: Session ${result.sessionId} for user ${userId}`);
         
@@ -115,6 +165,11 @@ export default function setupInterviewSocket(io) {
             sessionId,
             summary: result.summary
           });
+
+          // Persist to user interview history (non-blocking)
+          if (data.userId || socket.userId) {
+            persistInterviewHistory(sessionId, data.userId || socket.userId, result.summary);
+          }
           
         } else if (result.type === 'follow_up') {
           callback({
@@ -225,7 +280,12 @@ export default function setupInterviewSocket(io) {
           status: 'terminated',
           summary: result.summary
         });
-        
+
+        // Persist to user interview history (non-blocking)
+        if (data.userId || socket.userId) {
+          persistInterviewHistory(sessionId, data.userId || socket.userId, result.summary);
+        }
+
         // Leave room
         socket.leave(`session_${sessionId}`);
         
@@ -280,6 +340,22 @@ export default function setupInterviewSocket(io) {
       }
     });
     
+    /**
+     * Join existing session room (for clients loading a previously-created session)
+     * Allows the socket to receive room-based broadcasts: next_question, interview_completed, etc.
+     */
+    socket.on('join_session', ({ sessionId, userId }, callback) => {
+      if (!sessionId) {
+        if (typeof callback === 'function') callback({ success: false, error: 'sessionId is required' });
+        return;
+      }
+      socket.join(`session_${sessionId}`);
+      socket.sessionId = sessionId;
+      if (userId) socket.userId = userId;
+      console.log(`Socket ${socket.id} joined room session_${sessionId}`);
+      if (typeof callback === 'function') callback({ success: true });
+    });
+
     /**
      * Handle disconnection
      */

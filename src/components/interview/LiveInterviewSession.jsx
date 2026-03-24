@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import useRealTimeInterview from '../../hooks/useRealTimeInterview';
 import { motion, AnimatePresence } from 'framer-motion';
+import useInterviewSessionStore from '../../store/interviewSessionStore';
 
 /**
  * Real-Time Live Interview Component
@@ -8,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
  */
 
 function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
+  const navigate = useNavigate();
+  const { completeSession } = useInterviewSessionStore();
   const {
     connected,
     sessionId,
@@ -274,12 +278,22 @@ function LiveInterviewSession({ userId, resumeId, jobDescriptionId }) {
             </div>
           )}
           
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full px-6 py-3 bg-royal-600 text-white rounded-lg font-semibold hover:bg-royal-700 transition-all"
-          >
-            Start New Interview
-          </button>
+          <div className="flex gap-4">
+            {sessionId && (
+              <button
+                onClick={() => { completeSession(); navigate(`/interview/${sessionId}/report`); }}
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all"
+              >
+                View Full Report
+              </button>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 px-6 py-3 bg-royal-600 text-white rounded-lg font-semibold hover:bg-royal-700 transition-all"
+            >
+              Start New Interview
+            </button>
+          </div>
         </motion.div>
       </div>
     );

@@ -155,11 +155,10 @@ const mockInterviewSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Indexes
+// Indexes (room unique:true already creates an index — explicit removed to avoid duplicate)
 mockInterviewSchema.index({ interviewer: 1, status: 1 });
 mockInterviewSchema.index({ interviewee: 1, status: 1 });
 mockInterviewSchema.index({ scheduledTime: 1, status: 1 });
-mockInterviewSchema.index({ room: 1 });
 
 // Virtual for total duration
 mockInterviewSchema.virtual('actualDuration').get(function() {

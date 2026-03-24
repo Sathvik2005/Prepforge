@@ -22,19 +22,20 @@ let groqClient = null;
 
 // Initialize Groq client
 function initializeGroq() {
-  if (!process.env.GROQ_API_KEY) {
+  const apiKey = (process.env.GROQ_API_KEY || '').trim();
+  if (!apiKey) {
     console.error('❌ GROQ_API_KEY not configured');
     return null;
   }
 
-  if (!process.env.GROQ_API_KEY.startsWith('gsk_')) {
+  if (!apiKey.startsWith('gsk_')) {
     console.error('❌ Invalid GROQ_API_KEY format (should start with gsk_)');
     return null;
   }
 
   try {
     groqClient = new OpenAI({
-      apiKey: process.env.GROQ_API_KEY.trim(),
+      apiKey,
       baseURL: 'https://api.groq.com/openai/v1',
       timeout: CONFIG.timeout
     });

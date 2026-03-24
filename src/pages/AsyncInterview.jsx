@@ -19,10 +19,15 @@ import {
 import { gsap } from 'gsap';
 import { showSuccess, showError, showInfo, showLoading } from '../utils/toast';
 import { useNavigate, useParams } from 'react-router-dom';
+import { interviewAPI, mediaAPI } from '../services/api';
+import { useAuthStore } from '../store/authStore';
+import { useInterviewSessionStore } from '../store/interviewSessionStore';
 
 const AsyncInterview = () => {
   const navigate = useNavigate();
   const { interviewId } = useParams();
+  const { user } = useAuthStore();
+  const { saveAnswer, completeSession } = useInterviewSessionStore();
 
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
@@ -32,6 +37,8 @@ const AsyncInterview = () => {
   const [deviceReady, setDeviceReady] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [submittedSessionId, setSubmittedSessionId] = useState(null);
 
   const videoRef = useRef(null);
   const previewVideoRef = useRef(null);
@@ -40,39 +47,43 @@ const AsyncInterview = () => {
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
 
-  // Interview questions
-  const questions = [
-    {
-      id: 1,
-      text: 'Tell me about yourself and why you\'re interested in this role.',
-      timeLimit: 120, // 2 minutes
-      type: 'behavioral',
-    },
-    {
-      id: 2,
-      text: 'Describe a challenging technical problem you solved and your approach.',
-      timeLimit: 180, // 3 minutes
-      type: 'technical',
-    },
-    {
-      id: 3,
-      text: 'What are your greatest strengths as a software engineer?',
-      timeLimit: 120,
-      type: 'behavioral',
-    },
-    {
-      id: 4,
-      text: 'How do you stay updated with the latest technologies and best practices?',
-      timeLimit: 120,
-      type: 'behavioral',
-    },
-    {
-      id: 5,
-      text: 'Where do you see yourself in 5 years?',
-      timeLimit: 120,
-      type: 'behavioral',
-    },
+  // Backend questions (populated if we have an interviewId / session)
+  const [sessionQuestions, setSessionQuestions] = useState([]);
+
+  // Load questions from backend session if interviewId is provided
+  useEffect(() => {
+    if (interviewId) {
+      interviewAPI
+        .getStatus(interviewId)
+        .then((res) => {
+          const data = res.data?.data;
+          if (data?.questions?.length) {
+            setSessionQuestions(
+              data.questions.map((q, i) => ({
+                id: q._id || q.questionId || i + 1,
+                text: q.questionText || q.text,
+                timeLimit: q.timeLimit || 180,
+                type: q.questionType || q.type || 'behavioral',
+              }))
+            );
+          }
+        })
+        .catch(() => {
+          // Session not found or no questions yet – use defaults
+        });
+    }
+  }, [interviewId]);
+
+  // Default questions (fallback when no session)
+  const DEFAULT_QUESTIONS = [
+    { id: 1, text: "Tell me about yourself and why you're interested in this role.", timeLimit: 120, type: 'behavioral' },
+    { id: 2, text: 'Describe a challenging technical problem you solved and your approach.', timeLimit: 180, type: 'technical' },
+    { id: 3, text: 'What are your greatest strengths as a software engineer?', timeLimit: 120, type: 'behavioral' },
+    { id: 4, text: 'How do you stay updated with the latest technologies and best practices?', timeLimit: 120, type: 'behavioral' },
+    { id: 5, text: 'Where do you see yourself in 5 years?', timeLimit: 120, type: 'behavioral' },
   ];
+
+  const questions = sessionQuestions.length > 0 ? sessionQuestions : DEFAULT_QUESTIONS;
 
   useEffect(() => {
     initializeCamera();
@@ -252,7 +263,7 @@ const AsyncInterview = () => {
   const submitInterview = async () => {
     // Check if all questions are answered
     const unanswered = questions.filter((_, idx) => !videoBlobs[idx]);
-    
+
     if (unanswered.length > 0) {
       showError(`Please answer all questions (${unanswered.length} remaining)`);
       return;
@@ -262,48 +273,60 @@ const AsyncInterview = () => {
       return;
     }
 
-    // Simulate upload
+    setIsUploading(true);
     const loadingId = showLoading('Uploading interview...');
 
     try {
-      // In production, upload to server/cloud storage
-      const formData = new FormData();
-      videoBlobs.forEach((videoData, index) => {
-        if (videoData) {
-          formData.append(`question_${index}`, videoData.blob, `answer_${index}.webm`);
-          formData.append(`metadata_${index}`, JSON.stringify({
-            questionId: videoData.questionId,
-            duration: videoData.duration,
-            timestamp: videoData.timestamp,
-          }));
-        }
-      });
+      const userId = user?._id || user?.id;
 
-      // Mock API call
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      // Upload each recorded video blob via the real media API
+      for (let i = 0; i < videoBlobs.length; i++) {
+        const videoData = videoBlobs[i];
+        if (!videoData?.blob) continue;
 
-      // Store locally
-      localStorage.setItem(`async-interview-${interviewId}`, JSON.stringify({
-        completedAt: new Date().toISOString(),
-        questionsAnswered: questions.length,
-        totalDuration: videoBlobs.reduce((sum, v) => sum + (v?.duration || 0), 0),
-      }));
+        const uploadResult = await mediaAPI.uploadVideo(videoData.blob, {
+          sessionId: interviewId,
+          questionId: questions[i]?.id ?? i + 1,
+          questionIndex: i,
+          userId,
+        });
 
-      if (typeof loadingId === 'string') {
-        toast.dismiss(loadingId);
+        // Backend returns { success, mediaId, filename, ... } — build a URL from mediaId
+        const mediaId   = uploadResult?.data?.mediaId ?? null;
+        const videoUrl  = mediaId ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000/api'}/media/${mediaId}` : null;
+
+        // Persist answer into the Zustand session store
+        saveAnswer({
+          questionId: questions[i]?.id ?? i + 1,
+          questionIndex: i,
+          videoUrl,
+          duration: videoData.duration,
+          timestamp: videoData.timestamp,
+        });
       }
+
+      // Mark session complete in store
+      completeSession({ reportId: interviewId || null, finalSummary: null });
+
+      toast.dismiss(loadingId);
       showSuccess('Interview submitted successfully!');
       setSubmitted(true);
+      setSubmittedSessionId(interviewId);
 
-      // Animate completion
+      // Navigate to report (or dashboard as fallback)
       setTimeout(() => {
-        navigate('/dashboard');
-      }, 3000);
+        if (interviewId) {
+          navigate(`/interview/${interviewId}/report`);
+        } else {
+          navigate('/dashboard');
+        }
+      }, 2500);
     } catch (error) {
-      if (typeof loadingId === 'string') {
-        toast.dismiss(loadingId);
-      }
+      toast.dismiss(loadingId);
       showError('Upload failed. Please try again.');
+      console.error('[AsyncInterview] submitInterview error:', error);
+    } finally {
+      setIsUploading(false);
     }
   };
 

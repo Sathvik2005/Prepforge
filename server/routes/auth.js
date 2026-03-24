@@ -23,9 +23,11 @@ router.post('/register', authLimiter, async (req, res) => {
     await user.save();
 
     // Generate token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign(
+      { userId: user._id, name: user.name, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
 
     res.status(201).json({
       message: 'User created successfully',
@@ -59,9 +61,11 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     // Generate token
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign(
+      { userId: user._id, name: user.name, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
 
     // Update last active
     user.stats.lastActive = Date.now();
@@ -99,15 +103,23 @@ router.post('/firebase-login', async (req, res) => {
     const firebaseUser = await verifyFirebaseToken(idToken);
 
     // Find or create user in MongoDB
-    let user = await User.findOne({ email: firebaseUser.email });
+    // Anonymous Firebase users have no email — look them up by firebaseUid
+    let user;
+    if (firebaseUser.email) {
+      user = await User.findOne({ email: firebaseUser.email });
+    } else {
+      user = await User.findOne({ firebaseUid: firebaseUser.uid });
+    }
 
     if (!user) {
-      // Auto-create user from Firebase
+      // Auto-create user from Firebase (including anonymous / guest)
+      const guestEmail = `guest-${firebaseUser.uid.slice(0, 12)}@prepwiser.local`;
       user = new User({
-        name: firebaseUser.name || firebaseUser.email.split('@')[0],
-        email: firebaseUser.email,
+        name: firebaseUser.name || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Guest User'),
+        email: firebaseUser.email || guestEmail,
         firebaseUid: firebaseUser.uid,
-        emailVerified: firebaseUser.emailVerified
+        emailVerified: firebaseUser.email_verified || false,
+        isAnonymous: !firebaseUser.email,
       });
       await user.save();
     } else {
@@ -119,9 +131,11 @@ router.post('/firebase-login', async (req, res) => {
     }
 
     // Generate JWT token for API access
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
-      expiresIn: '7d',
-    });
+    const token = jwt.sign(
+      { userId: user._id, name: user.name, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
 
     // Update last active
     user.stats.lastActive = Date.now();

@@ -12,6 +12,7 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
   signInWithPopup,
+  signInAnonymously,
   sendPasswordResetEmail
 } from 'firebase/auth';
 
@@ -45,37 +46,136 @@ if (isFirebaseConfigured) {
 }
 
 /**
- * Check if Firebase is enabled
+ * Check if Firebase is enabled (API key is enough for email/password REST auth)
  */
 export const isFirebaseEnabled = () => {
-  return auth !== null;
+  const key = import.meta.env.VITE_FIREBASE_API_KEY;
+  return !!(key && key !== 'undefined' && key !== 'your_web_api_key');
 };
 
 /**
- * Sign in with email and password
+ * Sign in with email and password — uses REST API to bypass SDK auth/configuration-not-found
  */
 export const loginWithEmail = async (email, password) => {
-  if (!auth) throw new Error('Firebase not configured');
-  const userCredential = await signInWithEmailAndPassword(auth, email, password);
-  return userCredential.user;
+  const key = import.meta.env.VITE_FIREBASE_API_KEY;
+  if (!key || key === 'undefined') throw new Error('Firebase API key not configured');
+  let resp, data;
+  try {
+    resp = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: true }),
+      }
+    );
+    data = await resp.json();
+  } catch (networkErr) {
+    // Network / CORS issue — surface with a recognisable code so callers can fall through
+    throw Object.assign(new Error('Network error reaching Firebase. Check your connection.'), { code: 'auth/network-request-failed' });
+  }
+  if (!resp.ok) {
+    const m = data.error?.message || '';
+    if (/INVALID_LOGIN_CREDENTIALS|EMAIL_NOT_FOUND|INVALID_PASSWORD/.test(m))
+      throw Object.assign(new Error('Invalid email or password.'), { code: 'auth/invalid-credential' });
+    if (/TOO_MANY_ATTEMPTS/.test(m))
+      throw Object.assign(new Error('Too many failed attempts. Please try again later.'), { code: 'auth/too-many-requests' });
+    if (/USER_DISABLED/.test(m))
+      throw Object.assign(new Error('This account has been disabled.'), { code: 'auth/user-disabled' });
+    if (/INVALID_EMAIL/.test(m))
+      throw Object.assign(new Error('Invalid email address.'), { code: 'auth/invalid-email' });
+    throw Object.assign(new Error(data.error?.message || 'Sign-in failed'), { code: 'auth/unknown' });
+  }
+  return {
+    uid: data.localId,
+    email: data.email,
+    displayName: data.displayName || data.email.split('@')[0],
+    emailVerified: data.emailVerified || false,
+    isAnonymous: false,
+    idToken: data.idToken,           // ← token included directly, no getCurrentUserToken needed
+    refreshToken: data.refreshToken,
+  };
 };
 
 /**
- * Sign up with email and password
+ * Register with email and password — uses REST API to bypass SDK auth/configuration-not-found
  */
 export const registerWithEmail = async (email, password) => {
-  if (!auth) throw new Error('Firebase not configured');
-  const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  return userCredential.user;
+  const key = import.meta.env.VITE_FIREBASE_API_KEY;
+  if (!key || key === 'undefined') throw new Error('Firebase API key not configured');
+  let resp, data;
+  try {
+    resp = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${key}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, returnSecureToken: true }),
+      }
+    );
+    data = await resp.json();
+  } catch (networkErr) {
+    throw Object.assign(new Error('Network error reaching Firebase. Check your connection.'), { code: 'auth/network-request-failed' });
+  }
+  if (!resp.ok) {
+    const m = data.error?.message || '';
+    if (/EMAIL_EXISTS/.test(m))
+      throw Object.assign(new Error('An account with this email already exists.'), { code: 'auth/email-already-in-use' });
+    if (/WEAK_PASSWORD/.test(m))
+      throw Object.assign(new Error('Password must be at least 6 characters.'), { code: 'auth/weak-password' });
+    if (/INVALID_EMAIL/.test(m))
+      throw Object.assign(new Error('Invalid email address.'), { code: 'auth/invalid-email' });
+    throw Object.assign(new Error(data.error?.message || 'Registration failed'), { code: 'auth/unknown' });
+  }
+  return {
+    uid: data.localId,
+    email: data.email,
+    displayName: data.displayName || data.email.split('@')[0],
+    emailVerified: false,
+    isAnonymous: false,
+    idToken: data.idToken,
+    refreshToken: data.refreshToken,
+  };
 };
 
 /**
  * Sign in with Google
  */
 export const loginWithGoogle = async () => {
-  if (!auth || !googleProvider) throw new Error('Firebase not configured');
-  const result = await signInWithPopup(auth, googleProvider);
-  return result.user;
+  if (!auth || !googleProvider) throw new Error('Google sign-in is not available. Please use email and password.');
+  try {
+    const result = await signInWithPopup(auth, googleProvider);
+    return result.user;
+  } catch (error) {
+    const code = error?.code || '';
+    if (code === 'auth/configuration-not-found' || code === 'auth/operation-not-allowed') {
+      throw Object.assign(
+        new Error('Google sign-in is not enabled. Please use email and password instead.'),
+        { code }
+      );
+    }
+    throw error;
+  }
+};
+
+/**
+ * Anonymous / Guest sign-in
+ */
+export const loginAnonymously = async () => {
+  if (!auth) throw new Error('Guest sign-in is not available. Please use email and password.');
+  try {
+    const result = await signInAnonymously(auth);
+    return result.user;
+  } catch (error) {
+    const code = error?.code || '';
+    if (code === 'auth/configuration-not-found' || code === 'auth/operation-not-allowed') {
+      throw Object.assign(
+        new Error('Guest sign-in is not enabled. Please use email and password instead.'),
+        { code }
+      );
+    }
+    throw error;
+  }
 };
 
 /**

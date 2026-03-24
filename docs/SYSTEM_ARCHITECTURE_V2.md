@@ -1,4 +1,4 @@
-# Production-Grade Interview Platform - System Architecture V2
+# Inter view Platform - System Architecture V2
 
 ## CORE ARCHITECTURAL PRINCIPLES
 

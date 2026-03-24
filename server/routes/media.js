@@ -137,11 +137,13 @@ router.post('/upload', authMiddleware, upload.single('video'), async (req, res) 
     
     console.log(`✅ Video uploaded: ${req.file.filename} (${formatFileSize(fileStats.size)})`);
     
+    // Build a publicly-accessible URL for this file
+    const fileUrl = `/uploads/interviews/${sessionId}/${req.file.filename}`;
+
     res.status(200).json({
       success: true,
       mediaId: mediaRecord._id,
-      filename: mediaRecord.filename,
-      size: mediaRecord.size,
+      url: fileUrl,
       duration: mediaRecord.duration,
       message: 'Video uploaded successfully'
     });

@@ -9,18 +9,13 @@ const UserActivity = mongoose.model('UserActivity', new mongoose.Schema({
   userId: { type: String, required: true, index: true }, // Store as string (MongoDB ObjectId)
   sessionId: { type: String, required: true, index: true },
   activityType: { 
-    type: String, 
-    enum: [
-      'page_view', 'question_solved', 'question_attempted', 'code_run', 
-      'mock_interview', 'roadmap_generated', 'roadmap_milestone_completed',
-      'practice_session', 'login', 'logout', 'profile_update',
-      'dsa_sheet_opened', 'test_case_run', 'hint_viewed', 'solution_viewed',
-      'focus_mode_started', 'focus_mode_ended', 'research_query',
-      'collaboration_joined', 'collaboration_left', 'video_interview',
-      'async_interview', 'analytics_viewed', 'export_performed'
-    ],
+    type: String,
     required: true,
-    index: true
+    index: true,
+    validate: {
+      validator: (v) => typeof v === 'string' && v.trim().length > 0,
+      message: 'activityType must be a non-empty string'
+    }
   },
   metadata: {
     pageUrl: String,
@@ -179,11 +174,12 @@ export async function trackActivity(userId, activityType, metadata = {}, duratio
  */
 async function updateUserMetrics(userId, activityType, metadata, duration) {
   try {
-    let metrics = await UserMetrics.findOne({ userId });
-    
-    if (!metrics) {
-      metrics = new UserMetrics({ userId, accountCreatedAt: new Date() });
-    }
+    // Atomic find-or-create to prevent duplicate key errors on concurrent requests
+    let metrics = await UserMetrics.findOneAndUpdate(
+      { userId },
+      { $setOnInsert: { userId, accountCreatedAt: new Date() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
     
     // Update basic stats
     metrics.totalActivities += 1;
@@ -449,19 +445,69 @@ function updateSkillLevel(metrics, category) {
 }
 
 /**
- * Get metrics for user
+ * Get metrics for user — returns a normalised shape that the frontend expects.
+ *
+ * DB field → frontend field mapping:
+ *  problemsSolved (Number)         → problemsSolved.total / .easy / .medium / .hard
+ *  dailyStreak                     → currentStreak
+ *  mockInterviewsCompleted         → mockInterviews
+ *  totalFocusTime (seconds)        → focusTimeMinutes
+ *  skillLevels (Array<{category,level}>)  → skillLevels (Object {category: level})
+ *  performanceTrend[].score        → .averageScore  (alias)
+ *  performanceTrend[].successRate  → added (defaults to 0 if not stored)
  */
 export async function getUserMetrics(userId) {
   try {
-    let metrics = await UserMetrics.findOne({ userId });
-    
-    if (!metrics) {
-      metrics = new UserMetrics({ userId });
-      await metrics.save();
+    const metrics = await UserMetrics.findOneAndUpdate(
+      { userId },
+      { $setOnInsert: { userId } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // Convert Mongoose document to plain object for transformation
+    const raw = metrics.toObject ? metrics.toObject() : { ...metrics };
+
+    // ── problemsSolved: DB stores flat Numbers, frontend expects nested object ──
+    raw.problemsSolved = {
+      total:  raw.problemsSolved  || 0,
+      easy:   raw.easyProblems    || 0,
+      medium: raw.mediumProblems  || 0,
+      hard:   raw.hardProblems    || 0,
+    };
+
+    // ── streak field rename ──
+    raw.currentStreak = raw.dailyStreak || 0;
+
+    // ── interview count rename ──
+    raw.mockInterviews = raw.mockInterviewsCompleted || 0;
+
+    // ── focus time: DB seconds → frontend minutes ──
+    raw.focusTimeMinutes = Math.floor((raw.totalFocusTime || 0) / 60);
+
+    // ── skillLevels: DB Array<{category,level}> → frontend Object{category:level} ──
+    if (Array.isArray(raw.skillLevels)) {
+      const obj = {};
+      raw.skillLevels.forEach(s => {
+        if (s && s.category) obj[s.category] = s.level || 0;
+      });
+      raw.skillLevels = obj;
+    } else {
+      raw.skillLevels = raw.skillLevels || {};
     }
-    
-    return metrics;
-  } catch (error) {
+
+    // ── performanceTrend: add averageScore alias and default successRate ──
+    if (Array.isArray(raw.performanceTrend)) {
+      raw.performanceTrend = raw.performanceTrend.map(t => ({
+        ...t,
+        averageScore: t.averageScore != null ? t.averageScore : (t.score || 0),
+        successRate:  t.successRate  != null ? t.successRate  : 0,
+      }));
+    } else {
+      raw.performanceTrend = [];
+    }
+
+    console.log(`[Metrics] Returning normalised metrics for user ${userId}`);
+    return raw;
     console.error('Error getting user metrics:', error);
     throw error;
   }

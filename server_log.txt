@@ -1,0 +1,48 @@
+✅ OpenRouter service initialized for Interview features
+✅ OpenAI service initialized
+✅ Groq service initialized for Roadmap features
+✅ OpenAI provider initialized
+✅ Groq provider initialized
+✅ OpenRouter provider initialized
+🔍 Environment Configuration Check:
+   PORT: 5000
+   MONGODB_URI: ✅ Configured
+   OPENAI_API_KEY: ✅ Configured (sk-proj-6hGqZzc7u9_s...)
+   FIREBASE_PROJECT_ID: ✅ Configured
+
+🔧 Initializing External Services...
+✅ Firebase Admin SDK initialized successfully
+   Project ID: prepforge-interview-platform
+✅ OpenAI API initialized successfully
+   API Key: sk-proj-6hGqZzc7u9_s...
+✅ Collaboration handlers initialized
+✅ Interview WebSocket handlers initialized
+🔌 Connecting to MongoDB (Attempt 1/3)...
+(node:1600) [MONGOOSE] Warning: Duplicate schema index on {"sessionId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:1600) [MONGOOSE] Warning: Duplicate schema index on {"slug":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:1600) [MONGOOSE] Warning: Duplicate schema index on {"room":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+(node:1600) [MONGOOSE] Warning: Duplicate schema index on {"mockInterviewId":1} found. This is often due to declaring an index using both "index: true" and "schema.index()". Please remove the duplicate index definition.
+node:events:486
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use :::5000
+    at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+    at listenInCluster (node:net:1997:12)
+    at Server.listen (node:net:2102:7)
+    at file:///E:/HackAura/prepwiser/server/index.js:227:12
+    at ModuleJob.run (node:internal/modules/esm/module_job:377:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:691:26)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1976:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 'EADDRINUSE',
+  errno: -4091,
+  syscall: 'listen',
+  address: '::',
+  port: 5000
+}
+
+Node.js v25.0.0

@@ -105,67 +105,167 @@ setupInterviewSocket(io); // NEW: Improved dynamic interview handlers
 // Make IO instance available to routes
 app.set('io', io);
 
-// MongoDB Connection with SSL/TLS Configuration
-let connectionAttempts = 0;
-const MAX_ATTEMPTS = 3;
-
-const connectDB = async () => {
-  try {
-    connectionAttempts++;
-    
-    // Check if MONGODB_URI is configured
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI not found in environment variables');
-    }
-    
-    const mongoOptions = {
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      family: 4, // Use IPv4, skip trying IPv6
-      retryWrites: true,
-      w: 'majority',
-      ssl: true,
-      tlsAllowInvalidCertificates: true,
-      tlsAllowInvalidHostnames: true,
-    };
-
-    // Try MongoDB Atlas first
-    let mongoURI = process.env.MONGODB_URI;
-    
-    // If Atlas connection fails after max attempts, try local MongoDB
-    if (connectionAttempts > MAX_ATTEMPTS && mongoURI.includes('mongodb+srv')) {
-      console.log('⚠️  Switching to local MongoDB...');
-      mongoURI = 'mongodb://localhost:27017/prepforge';
-    }
-
-    console.log(`🔌 Connecting to MongoDB (Attempt ${connectionAttempts}/${MAX_ATTEMPTS})...`);
-    await mongoose.connect(mongoURI, mongoOptions);
-    console.log('✅ MongoDB Connected Successfully');
-    console.log(`📍 Database: ${mongoURI.includes('localhost') ? 'Local MongoDB' : 'MongoDB Atlas'}`);
-    console.log(`📊 Database Name: ${mongoose.connection.name}`);
-    connectionAttempts = 0; // Reset on success
-  } catch (error) {
-    console.error('❌ MongoDB Connection Error:', error.message);
-    
-    if (connectionAttempts <= MAX_ATTEMPTS) {
-      console.error('💡 Troubleshooting Tips:');
-      console.error('   1. Check MongoDB Atlas IP whitelist (add 0.0.0.0/0 for testing)');
-      console.error('   2. Verify connection string in .env file');
-      console.error('   3. Ensure database user has correct permissions');
-      console.error('   4. Check if MongoDB Atlas cluster is active');
-      console.error(`   5. Connection attempt ${connectionAttempts}/${MAX_ATTEMPTS}`);
-      
-      // Retry
-      console.log('🔄 Retrying connection in 5 seconds...');
-      setTimeout(connectDB, 5000);
-    } else {
-      console.error('⚠️  Could not connect to MongoDB Atlas. Trying local MongoDB...');
-      setTimeout(connectDB, 2000);
-    }
-  }
+// ─── MongoDB Connection ──────────────────────────────────────────────────────
+// Atlas options — TLS required for Atlas M0 on Node v25 / OpenSSL 3
+const atlasOptions = {
+  serverSelectionTimeoutMS: 8000,
+  connectTimeoutMS: 8000,
+  socketTimeoutMS: 60000,
+  family: 4,
+  maxPoolSize: 10,
+  tls: true,
+  tlsAllowInvalidCertificates: true,
 };
 
+// Local in-memory options — NO TLS (MongoMemoryServer uses plain TCP)
+const localOptions = {
+  serverSelectionTimeoutMS: 10000,
+  connectTimeoutMS: 10000,
+  socketTimeoutMS: 60000,
+  family: 4,
+  maxPoolSize: 10,
+};
+
+let _dbReady = false;
+let _memoryServer = null;
+// Sequential counter: each startMemoryFallback call gets a unique ID;
+// only the most recent one is allowed to complete.
+let _fallbackSeq = 0;
+
+async function startMemoryFallback() {
+  const mySeq = ++_fallbackSeq;
+  _dbReady = false;
+  try {
+    // Stop previous in-memory server without triggering reconnect logic
+    if (_memoryServer) {
+      const old = _memoryServer;
+      _memoryServer = null;
+      await old.stop().catch(() => {});
+    }
+    // Disconnect from current URI before reconnecting
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close().catch(() => {});
+    }
+    // Bail out if a newer invocation has started
+    if (mySeq !== _fallbackSeq) return;
+
+    const { MongoMemoryServer } = await import('mongodb-memory-server');
+    _memoryServer = await MongoMemoryServer.create({ instance: { dbName: 'prepforge' } });
+    if (mySeq !== _fallbackSeq) { await _memoryServer.stop().catch(() => {}); _memoryServer = null; return; }
+
+    await mongoose.connect(_memoryServer.getUri(), localOptions);
+    if (mySeq !== _fallbackSeq) return;
+
+    _dbReady = true;
+    console.log('✅ Local in-memory MongoDB started (demo mode — data resets on restart)');
+    console.log('   ⚡ Resume your Atlas cluster at https://cloud.mongodb.com to restore real data');
+  } catch (err) {
+    if (mySeq === _fallbackSeq) console.error('❌ Local fallback failed:', err.message);
+  }
+}
+
+async function connectDB() {
+  const MONGO_URI = process.env.MONGODB_URI;
+  if (!MONGO_URI) {
+    console.warn('⚠️  MONGODB_URI not set — starting local fallback');
+    return startMemoryFallback();
+  }
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close().catch(() => {});
+      }
+      console.log(`🔌 Connecting to MongoDB Atlas... (attempt ${attempt}/3)`);
+      await mongoose.connect(MONGO_URI, atlasOptions);
+      _dbReady = true;
+      console.log(`✅ MongoDB Atlas Connected → ${mongoose.connection.name}`);
+      return;
+    } catch (err) {
+      console.warn(`⚠️  Atlas attempt ${attempt} failed: ${err.message.slice(0, 80)}`);
+      if (attempt < 3) await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+
+  // Try a local MongoDB instance before falling back to in-memory
+  console.warn('⚠️  Atlas unreachable — trying local MongoDB at localhost:27017...');
+  try {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.connection.close().catch(() => {});
+    }
+    await mongoose.connect('mongodb://localhost:27017/prepforge', localOptions);
+    _dbReady = true;
+    console.log('✅ Local MongoDB connected (data persists across restarts · localhost:27017/prepforge)');
+    return; // Local MongoDB is good — no need for in-memory or retryAtlas
+  } catch (localErr) {
+    console.warn(`⚠️  Local MongoDB unavailable (${localErr.message.slice(0, 50)}) — starting in-memory fallback...`);
+  }
+
+  await startMemoryFallback();
+
+  // Retry Atlas every 60s ONLY to upgrade from in-memory to real Atlas when cluster resumes
+  const retryAtlas = async () => {
+    // Already on real Atlas (no memory server)? Stop retrying.
+    if (_dbReady && !_memoryServer) return;
+    try {
+      // Bump sequence so any in-progress fallback aborts
+      _fallbackSeq++;
+      if (mongoose.connection.readyState !== 0) {
+        await mongoose.connection.close().catch(() => {});
+      }
+      if (_memoryServer) { const old = _memoryServer; _memoryServer = null; await old.stop().catch(() => {}); }
+      await mongoose.connect(MONGO_URI, atlasOptions);
+      _dbReady = true;
+      console.log(`✅ MongoDB Atlas reconnected → ${mongoose.connection.name} (real data restored)`);
+      // Successfully upgraded to Atlas — stop the retry loop
+    } catch {
+      // Atlas still unreachable — keep the existing in-memory server running (don't restart it)
+      if (!_memoryServer) {
+        // Memory server died for another reason — restart it
+        await startMemoryFallback();
+      } else {
+        // Memory server is fine; just schedule next Atlas retry quietly
+        _dbReady = true; // make sure requests aren't blocked
+      }
+      setTimeout(retryAtlas, 120000); // Retry every 2 minutes instead of 60s
+    }
+  };
+  setTimeout(retryAtlas, 120000); // First retry after 2 minutes
+}
+
 connectDB();
+
+// Only log; do NOT auto-restart on disconnect — avoids infinite loops.
+// Memory server doesn't spontaneously disconnect; Atlas reconnect is handled by retryAtlas.
+mongoose.connection.on('disconnected', () => {
+  if (_dbReady) {
+    _dbReady = false;
+    console.warn('⚠️  MongoDB disconnected (will recover automatically)');
+  }
+});
+mongoose.connection.on('reconnected',  () => { _dbReady = true; console.log('✅ MongoDB reconnected'); });
+mongoose.connection.on('connected',    () => { _dbReady = true; });
+mongoose.connection.on('error', (err) => {
+  const m = err.message || '';
+  if (!m.includes('ECONNRESET') && !m.includes('SSL') && !m.includes('ssl')) {
+    console.error('🔴 MongoDB error:', m.slice(0, 100));
+  }
+});
+
+// DB wait middleware — waits up to 45s for DB before returning 503
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') return next();
+  if (mongoose.connection.readyState === 1) return next();
+  let waited = 0;
+  while (mongoose.connection.readyState !== 1 && waited < 45000) {
+    await new Promise(r => setTimeout(r, 300));
+    waited += 300;
+  }
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({ message: 'Database starting up, please retry in a moment.', retry: true });
+  }
+  next();
+});
 
 // Routes
 app.use('/api/auth', authRoutes);

@@ -15,10 +15,12 @@ import {
   MessageSquare,
   ChevronLeft,
   ChevronRight,
+  Play,
 } from 'lucide-react';
 import { gsap } from 'gsap';
 import { showSuccess, showError } from '../utils/toast';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const InterviewScheduling = () => {
   const navigate = useNavigate();
@@ -71,6 +73,25 @@ const InterviewScheduling = () => {
     },
   ];
 
+  // Generate availability for next 30 days using LOCAL dates (avoids UTC timezone mismatch)
+  const getAvailability = (seed) => {
+    const dates = [];
+    const today = new Date();
+    const todayY = today.getFullYear();
+    const todayM = today.getMonth();
+    const todayD = today.getDate();
+    for (let i = 1; i <= 30; i++) {
+      if ((i + seed) % 3 !== 0) {
+        const d = new Date(todayY, todayM, todayD + i);
+        const y = d.getFullYear();
+        const mo = String(d.getMonth() + 1).padStart(2, '0');
+        const da = String(d.getDate()).padStart(2, '0');
+        dates.push(`${y}-${mo}-${da}`);
+      }
+    }
+    return dates.slice(0, 8);
+  };
+
   // Mock interviewers
   const interviewers = [
     {
@@ -82,7 +103,7 @@ const InterviewScheduling = () => {
       interviews: 342,
       avatar: '👩‍💻',
       specialties: ['frontend', 'dsa'],
-      availability: ['2026-01-20', '2026-01-21', '2026-01-22'],
+      availability: getAvailability(1),
     },
     {
       id: 2,
@@ -93,7 +114,7 @@ const InterviewScheduling = () => {
       interviews: 278,
       avatar: '👨‍💼',
       specialties: ['backend', 'system-design', 'dsa'],
-      availability: ['2026-01-20', '2026-01-23', '2026-01-24'],
+      availability: getAvailability(2),
     },
     {
       id: 3,
@@ -104,7 +125,7 @@ const InterviewScheduling = () => {
       interviews: 521,
       avatar: '👩‍🏫',
       specialties: ['behavioral', 'system-design'],
-      availability: ['2026-01-21', '2026-01-22', '2026-01-25'],
+      availability: getAvailability(3),
     },
     {
       id: 4,
@@ -115,7 +136,7 @@ const InterviewScheduling = () => {
       interviews: 189,
       avatar: '👨‍🔬',
       specialties: ['frontend', 'backend', 'dsa'],
-      availability: ['2026-01-20', '2026-01-24', '2026-01-26'],
+      availability: getAvailability(4),
     },
   ];
 
@@ -172,8 +193,12 @@ const InterviewScheduling = () => {
     return days;
   };
 
+  // Use local date (not UTC) to avoid timezone mismatches on IST/UTC±N systems
   const formatDate = (date) => {
-    return date.toISOString().split('T')[0];
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   };
 
   const isDateAvailable = (date) => {
@@ -195,45 +220,54 @@ const InterviewScheduling = () => {
       return;
     }
 
-    const booking = {
-      id: `INT-${Date.now()}`,
-      date: formatDate(selectedDate),
-      time: selectedSlot.time,
-      interviewer: selectedInterviewer,
-      type: selectedType,
-      mode: interviewMode,
-      status: 'scheduled',
-      meetingLink: interviewMode === 'live' 
-        ? `https://meet.prepforge.com/${Date.now()}` 
-        : null,
-      createdAt: new Date().toISOString(),
-    };
+    // Build scheduledAt datetime
+    const [hour, minute] = selectedSlot.time.split(':').map(Number);
+    const scheduledAt = new Date(selectedDate);
+    scheduledAt.setHours(hour, minute, 0, 0);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const response = await api.post('/interviews/schedule', {
+        type: selectedType.id,
+        mode: interviewMode,
+        scheduledAt: scheduledAt.toISOString(),
+        duration: selectedType.duration,
+      });
 
-    setBookedInterview(booking);
-    setShowConfirmation(true);
+      const savedInterview = response.data;
 
-    // Animate confirmation
-    setTimeout(() => {
-      if (confirmationRef.current) {
-        gsap.from(confirmationRef.current.children, {
-          y: 50,
-          opacity: 0,
-          duration: 0.6,
-          stagger: 0.15,
-          ease: 'back.out(1.4)',
-        });
-      }
-    }, 100);
+      const booking = {
+        _id: savedInterview._id,
+        date: formatDate(selectedDate),
+        time: selectedSlot.time,
+        interviewer: selectedInterviewer,
+        type: selectedType,
+        mode: interviewMode,
+        status: 'scheduled',
+        meetingLink: savedInterview.meetingLink || null,
+      };
 
-    showSuccess('Interview scheduled successfully! 🎉');
+      setBookedInterview(booking);
+      setShowConfirmation(true);
 
-    // Save to localStorage (mock backend)
-    const existingBookings = JSON.parse(localStorage.getItem('interviews') || '[]');
-    existingBookings.push(booking);
-    localStorage.setItem('interviews', JSON.stringify(existingBookings));
+      // Animate confirmation
+      setTimeout(() => {
+        if (confirmationRef.current) {
+          gsap.from(confirmationRef.current.children, {
+            y: 50,
+            opacity: 0,
+            duration: 0.6,
+            stagger: 0.15,
+            ease: 'back.out(1.4)',
+          });
+        }
+      }, 100);
+
+      showSuccess('Interview scheduled successfully! 🎉');
+    } catch (err) {
+      const msg = err.response?.data?.message || err.response?.data?.error || err.message || 'Failed to schedule interview';
+      showError(msg);
+      console.error('Schedule error:', err.response?.data || err.message);
+    }
   };
 
   const navigateMonth = (direction) => {
@@ -324,26 +358,36 @@ const InterviewScheduling = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex gap-4 mt-8">
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="flex-1 py-4 bg-royal-600 hover:bg-royal-700 text-white rounded-xl font-semibold hover:scale-105 transition-transform"
-              >
-                Go to Dashboard
-              </button>
-              <button
-                onClick={() => {
-                  setShowConfirmation(false);
-                  setSelectedDate(null);
-                  setSelectedSlot(null);
-                  setSelectedInterviewer(null);
-                  setSelectedType(null);
-                  setInterviewMode(null);
-                }}
-                className="flex-1 py-4 bg-white/10 rounded-xl font-semibold hover:bg-white/20 transition-colors"
-              >
-                Schedule Another
-              </button>
+            <div className="flex flex-col gap-3 mt-8">
+              {bookedInterview._id && (
+                <button
+                  onClick={() => navigate(`/interview-room/${bookedInterview._id}`)}
+                  className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white rounded-xl font-semibold text-lg flex items-center justify-center gap-2 hover:scale-105 transition-transform"
+                >
+                  <Play className="w-5 h-5" /> Start Interview Now
+                </button>
+              )}
+              <div className="flex gap-4">
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="flex-1 py-4 bg-royal-600 hover:bg-royal-700 text-white rounded-xl font-semibold hover:scale-105 transition-transform"
+                >
+                  Go to Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    setShowConfirmation(false);
+                    setSelectedDate(null);
+                    setSelectedSlot(null);
+                    setSelectedInterviewer(null);
+                    setSelectedType(null);
+                    setInterviewMode(null);
+                  }}
+                  className="flex-1 py-4 bg-white/10 rounded-xl font-semibold hover:bg-white/20 transition-colors"
+                >
+                  Schedule Another
+                </button>
+              </div>
             </div>
           </div>
 

@@ -50,13 +50,22 @@ const AnalyticsDashboard = () => {
         gamificationAPI.getLeaderboard('weekly', 10).catch(e => ({ data: null }))
       ]);
 
-      setDashboardData(dashboardRes.data);
-      setTrends(trendsRes.data || []);
-      setPredictions(predictionsRes.data);
-      setStrengthsWeaknesses(strengthsWeaknessesRes.data);
-      setStudyPatterns(studyPatternsRes.data);
-      setTopicMastery(topicMasteryRes.data || {});
-      setLeaderboard(leaderboardRes.data);
+      // Server wraps all responses as { success, data }; unwrap the inner data layer.
+      const unwrap = (res) => res?.data?.data ?? res?.data ?? null;
+
+      setDashboardData(unwrap(dashboardRes));
+      setTrends(unwrap(trendsRes) || []);
+      setPredictions(unwrap(predictionsRes) || {
+        readinessScore: 0,
+        estimatedPassProbability: 0,
+        suggestedFocusAreas: [],
+        daysToReadiness: 999,
+        confidenceLevel: 'low',
+      });
+      setStrengthsWeaknesses(unwrap(strengthsWeaknessesRes) || { strengths: [], weaknesses: [] });
+      setStudyPatterns(unwrap(studyPatternsRes));
+      setTopicMastery(unwrap(topicMasteryRes) || {});
+      setLeaderboard(unwrap(leaderboardRes));
     } catch (error) {
       console.error('Error fetching analytics:', error);
       showError('Failed to load analytics data');

@@ -69,18 +69,27 @@ const authMiddleware = async (req, res, next) => {
     if (useFirebase) {
       try {
         const firebaseUser = await verifyFirebaseToken(token);
-        
-        // Find or create user in MongoDB
-        let user = await User.findOne({ email: firebaseUser.email });
-        
+
+        // Find or create user — anonymous users have no email, look them up by firebaseUid
+        let user;
+        if (firebaseUser.email) {
+          user = await User.findOne({ email: firebaseUser.email });
+        } else {
+          user = await User.findOne({ firebaseUid: firebaseUser.uid });
+        }
+
         if (!user) {
-          // Auto-create user from Firebase
+          const guestEmail = `guest-${firebaseUser.uid.slice(0, 12)}@prepwiser.local`;
           user = new User({
-            name: firebaseUser.name || firebaseUser.email.split('@')[0],
-            email: firebaseUser.email,
+            name: firebaseUser.name || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Guest User'),
+            email: firebaseUser.email || guestEmail,
             firebaseUid: firebaseUser.uid,
-            emailVerified: firebaseUser.emailVerified
+            emailVerified: firebaseUser.email_verified || false,
+            isAnonymous: !firebaseUser.email,
           });
+          await user.save();
+        } else if (!user.firebaseUid) {
+          user.firebaseUid = firebaseUser.uid;
           await user.save();
         }
 
@@ -124,14 +133,28 @@ const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: 'Invalid token payload' });
     }
 
-    // Verify user exists
-    const user = await User.findById(userId);
+    // Find user — auto-recreate if missing (handles in-memory DB restart wipe)
+    let user = await User.findById(userId);
     
     if (!user) {
-      return res.status(401).json({ 
-        message: 'User not found',
-        details: 'The user associated with this token no longer exists'
-      });
+      // JWT is cryptographically valid but user record was wiped (server restart).
+      // Recreate a minimal record using claims embedded in the token so the
+      // session survives without forcing the user to log in again.
+      try {
+        user = new User({
+          _id: userId,
+          name: decoded.name || 'User',
+          email: decoded.email || `restored-${userId.slice(0, 8)}@prepwiser.local`,
+        });
+        await user.save();
+        console.log('🔄 Auto-restored user session:', user.email);
+      } catch (recreateErr) {
+        // If recreation fails (e.g. duplicate email), reject gracefully
+        return res.status(401).json({
+          message: 'Session expired, please log in again',
+          details: recreateErr.message
+        });
+      }
     }
 
     req.user = {
